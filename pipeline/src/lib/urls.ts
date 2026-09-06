@@ -18,6 +18,20 @@ export function normalizeUrl(raw: string): string {
   }
 }
 
+// Unele site-uri servesc RSS-ul dintr-un cache blocat: observatorul.md returna articole
+// vechi de o luna, desi publica zilnic. Antetele no-cache nu ajuta — doar un URL diferit.
+// Folosim un parametru care se schimba o data la 10 minute (cat e si ciclul de cron):
+// mereu proaspat intre cicluri, dar cacheabil in interiorul unui ciclu.
+export function feedUrlAntiCache(feedUrl: string, now: number = Date.now()): string {
+  try {
+    const u = new URL(feedUrl);
+    u.searchParams.set("_", String(Math.floor(now / 600_000)));
+    return u.toString();
+  } catch {
+    return feedUrl;
+  }
+}
+
 export function normTitle(t: string): string {
   return t
     .toLowerCase()

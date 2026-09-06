@@ -4,7 +4,7 @@ import { extractText } from "./lib/extract";
 import { embed } from "./lib/embeddings";
 import { confirmSameEvent, summarizeCluster } from "./lib/summarize";
 import { decideCluster } from "./lib/cluster";
-import { normalizeUrl, titlesNearlyIdentical } from "./lib/urls";
+import { normalizeUrl, titlesNearlyIdentical, feedUrlAntiCache } from "./lib/urls";
 import { Meter } from "./lib/meter";
 import * as db from "./lib/db";
 
@@ -34,7 +34,7 @@ export async function discover(env: Env) {
   const sources = await db.enabledSources(env.DB);
   for (const src of sources) {
     try {
-      const res = await fetch(src.feed_url, { headers: { "user-agent": "StiriMD/1.0" } });
+      const res = await fetch(feedUrlAntiCache(src.feed_url), { headers: { "user-agent": "StiriMD/1.0" } });
       if (!res.ok) continue;
       const items = parseFeed(await res.text());
       // Titluri recente ale sursei: prind acelasi articol republicat cu titlu editat.

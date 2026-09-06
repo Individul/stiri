@@ -1,5 +1,25 @@
 import { describe, it, expect } from "vitest";
-import { normalizeUrl, titlesNearlyIdentical } from "../src/lib/urls";
+import { normalizeUrl, titlesNearlyIdentical, feedUrlAntiCache } from "../src/lib/urls";
+
+describe("feedUrlAntiCache", () => {
+  // Aliniat la inceputul unei ferestre de 10 minute, ca sa testam corect limitele.
+  const t0 = Math.floor(1_788_700_000_000 / 600_000) * 600_000;
+  it("adauga un parametru care ocoleste cache-ul", () => {
+    expect(feedUrlAntiCache("https://observatorul.md/feed/", t0))
+      .toBe(`https://observatorul.md/feed/?_=${Math.floor(t0 / 600000)}`);
+  });
+  it("acelasi URL in interiorul aceluiasi ciclu de 10 minute", () => {
+    expect(feedUrlAntiCache("https://ex.md/feed", t0))
+      .toBe(feedUrlAntiCache("https://ex.md/feed", t0 + 5 * 60_000));
+  });
+  it("URL diferit la ciclul urmator", () => {
+    expect(feedUrlAntiCache("https://ex.md/feed", t0))
+      .not.toBe(feedUrlAntiCache("https://ex.md/feed", t0 + 11 * 60_000));
+  });
+  it("pastreaza parametrii existenti", () => {
+    expect(feedUrlAntiCache("https://ex.md/rss?lang=ro", t0)).toContain("lang=ro");
+  });
+});
 
 describe("normalizeUrl", () => {
   it("scoate parametrii de urmarire", () => {

@@ -26,19 +26,26 @@ function fmtDate(iso: string | null): string {
   const normalized = /[T]/.test(iso) ? iso : iso.replace(" ", "T") + "Z";
   const d = new Date(normalized);
   if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleDateString("ro-RO", { day: "numeric", month: "short", year: "numeric" });
+  return d.toLocaleDateString("ro-RO", { day: "numeric", month: "long", year: "numeric" });
 }
 ---
 
-<Base title={`${cluster.canonical_title} — Știri`}>
-  <a class="back" href="/">← Toate știrile</a>
+<Base title={`${cluster.canonical_title} — Știri`} description={paragraphs[0]?.slice(0, 160)}>
+  <a class="back" href="/">← Prima pagină</a>
 
   <article>
-    <div class="meta">
+    <div class="hd">
       <span class="cat">{cluster.category}</span>
-      <span class="badge">{formatSourceCount(cluster.source_count)}</span>
+      <h1>{cluster.canonical_title}</h1>
     </div>
-    <h1>{cluster.canonical_title}</h1>
+
+    <div class="meta-row">
+      <span class="meta-info">
+        {formatSourceCount(cluster.source_count)}
+        {fmtDate(cluster.last_updated_at) && <> · {fmtDate(cluster.last_updated_at)}</>}
+      </span>
+      <span class="sumar">Sumar automat</span>
+    </div>
 
     <div class="summary">
       {paragraphs.map((p) => <p>{p}</p>)}
@@ -47,18 +54,21 @@ function fmtDate(iso: string | null): string {
     {
       sources.length > 0 && (
         <section class="sources">
-          <h2>Surse:</h2>
+          <h2 class="sources-h">Sursele subiectului</h2>
           <ul>
             {sources.map((s) => (
               <li>
-                <a href={s.url} target="_blank" rel="noopener">
-                  <span class="src-name">{s.source}</span>
-                  <span class="src-title">{s.title}</span>
-                </a>
-                {s.published_at && <span class="src-date">{fmtDate(s.published_at)}</span>}
+                <a class="src-title" href={s.url} target="_blank" rel="noopener">{s.title}</a>
+                <span class="src-meta">
+                  {s.source}{s.published_at && <> · {fmtDate(s.published_at)}</>}
+                </span>
               </li>
             ))}
           </ul>
+          <p class="note">
+            Rezumatul este generat automat de un sistem AI pe baza articolelor de la sursele
+            de mai sus; articolele integrale aparțin în totalitate surselor originale.
+          </p>
         </section>
       )
     }
@@ -67,73 +77,96 @@ function fmtDate(iso: string | null): string {
   <style>
     .back {
       display: inline-block;
-      font-size: 0.85rem;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
       text-decoration: none;
-      margin-bottom: 1.25rem;
+      margin-bottom: 1.5rem;
     }
-    .back:hover {
-      text-decoration: underline;
+    .back:hover { color: var(--accent); }
+
+    .hd { text-align: center; }
+    .hd .cat { display: block; margin-bottom: 0.5rem; }
+    article h1 {
+      font-family: var(--font-display);
+      font-size: 2rem;
+      line-height: 1.18;
+      margin: 0 auto 0;
+      max-width: 620px;
     }
-    .meta {
+
+    .meta-row {
       display: flex;
       align-items: center;
-      gap: 0.6rem;
-      margin-bottom: 0.6rem;
-    }
-    article h1 {
-      font-size: 1.7rem;
-      line-height: 1.25;
-      letter-spacing: -0.02em;
-      margin: 0 0 1.25rem;
-    }
-    .summary p {
-      margin: 0 0 1.15rem;
-      font-size: 1.08rem;
-      line-height: 1.75;
-    }
-    .sources {
-      margin-top: 2.5rem;
-      padding-top: 1.25rem;
+      justify-content: space-between;
+      gap: 1rem;
+      margin: 1.5rem 0;
+      padding: 0.7rem 0;
       border-top: 1px solid var(--border);
-    }
-    .sources h2 {
-      font-size: 1rem;
-      margin: 0 0 0.75rem;
-    }
-    .sources ul {
-      list-style: none;
-      margin: 0;
-      padding: 0;
-    }
-    .sources li {
-      padding: 0.55rem 0;
       border-bottom: 1px solid var(--border);
     }
-    .sources li:last-child {
-      border-bottom: 0;
-    }
-    .sources a {
-      text-decoration: none;
-      display: block;
-    }
-    .sources a:hover .src-title {
-      text-decoration: underline;
-    }
-    .src-name {
-      display: block;
-      font-size: 0.75rem;
+    .meta-info { font-size: 0.82rem; color: var(--muted); }
+    .sumar {
+      font-size: 0.68rem;
+      font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.04em;
-      color: var(--muted);
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      border-radius: 999px;
+      padding: 0.25rem 0.7rem;
+      white-space: nowrap;
+    }
+
+    .summary p {
+      font-family: var(--font-display);
+      font-size: 1.08rem;
+      line-height: 1.75;
+      margin: 0 0 1.2rem;
+    }
+
+    .sources { margin-top: 2.75rem; }
+    .sources-h {
+      font-family: var(--font-body);
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--fg);
+      border-top: 2px solid var(--fg);
+      padding-top: 0.6rem;
+      margin: 0 0 0.25rem;
+    }
+    .sources ul { list-style: none; margin: 0; padding: 0; }
+    .sources li {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 1.25rem;
+      padding: 0.8rem 0;
+      border-bottom: 1px solid var(--border);
     }
     .src-title {
-      color: var(--accent);
+      color: var(--fg);
+      text-decoration: none;
+      font-size: 0.98rem;
+      line-height: 1.4;
     }
-    .src-date {
-      display: block;
-      font-size: 0.75rem;
+    .src-title:hover { color: var(--accent); text-decoration: underline; }
+    .src-meta {
+      flex: none;
+      text-align: right;
+      font-size: 0.78rem;
       color: var(--muted);
-      margin-top: 0.15rem;
+      white-space: nowrap;
+    }
+    .note {
+      margin-top: 1.5rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+      line-height: 1.6;
     }
   </style>
 </Base>

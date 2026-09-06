@@ -14,92 +14,105 @@ const { title, description } = Astro.props;
     <meta name="color-scheme" content="light dark" />
     {description && <meta name="description" content={description} />}
     <title>{title}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=Playfair+Display:wght@700;900&display=swap"
+    />
     <style is:global>
       :root {
-        --bg: #ffffff;
-        --fg: #1a1a1a;
-        --muted: #666;
-        --border: #e6e6e6;
-        --accent: #1256b8;
-        --accent-bg: #eef3fb;
-        --card-hover: #fafafa;
+        /* Hartie veche, usor galbuie */
+        --bg: #f4ecd8;
+        --bg-soft: #efe6cf;
+        --fg: #2b2117;
+        --muted: #7a6a52;
+        --border: #d8c9a8;
+        --border-strong: #b9a67f;
+        --accent: #8a2b1e;      /* rosu-caramiziu de tipar vechi */
+        --accent-bg: #e9dcc0;
+        --font-body: "Lora", Georgia, "Times New Roman", serif;
+        --font-display: "Playfair Display", Georgia, serif;
       }
       @media (prefers-color-scheme: dark) {
         :root {
-          --bg: #16181c;
-          --fg: #e8e8ea;
-          --muted: #9aa0a8;
-          --border: #2a2e35;
-          --accent: #7fb0ff;
-          --accent-bg: #1d2530;
-          --card-hover: #1b1e24;
+          /* Hartie sepia intunecata */
+          --bg: #1e1810;
+          --bg-soft: #26201655;
+          --fg: #ece0c8;
+          --muted: #a8977b;
+          --border: #3b3122;
+          --border-strong: #4d4130;
+          --accent: #d98b6f;
+          --accent-bg: #2a2114;
         }
       }
-      * {
-        box-sizing: border-box;
-      }
-      html {
-        color-scheme: light dark;
-      }
+      * { box-sizing: border-box; }
+      html { color-scheme: light dark; }
       body {
         margin: 0;
         background: var(--bg);
         color: var(--fg);
-        font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        line-height: 1.6;
+        font-family: var(--font-body);
+        font-size: 1.02rem;
+        line-height: 1.7;
+        text-rendering: optimizeLegibility;
         -webkit-font-smoothing: antialiased;
       }
-      .wrap {
-        max-width: 720px;
-        margin: 0 auto;
-        padding: 1.5rem 1.25rem 4rem;
-      }
-      a {
-        color: var(--accent);
-      }
+      .wrap { max-width: 720px; margin: 0 auto; padding: 1.5rem 1.25rem 4rem; }
+      a { color: var(--accent); }
+      h1, h2, h3 { font-family: var(--font-display); font-weight: 700; letter-spacing: .01em; }
+
+      /* Antet ca un cap de ziar */
       .site-head {
-        display: flex;
-        align-items: baseline;
-        gap: 0.6rem;
-        padding-bottom: 1rem;
-        margin-bottom: 1.25rem;
-        border-bottom: 1px solid var(--border);
+        text-align: center;
+        padding: 1.4rem 0 1rem;
+        margin-bottom: 1.5rem;
+        border-top: 3px double var(--border-strong);
+        border-bottom: 3px double var(--border-strong);
       }
+      .site-head a { color: inherit; text-decoration: none; }
       .site-head h1 {
-        font-size: 1.35rem;
+        font-family: var(--font-display);
+        font-weight: 900;
+        font-size: 2.6rem;
+        line-height: 1;
         margin: 0;
-        letter-spacing: -0.01em;
-      }
-      .site-head a {
-        color: inherit;
-        text-decoration: none;
+        letter-spacing: .02em;
       }
       .site-head .tagline {
+        display: block;
+        margin-top: .5rem;
+        font-style: italic;
+        font-size: .9rem;
         color: var(--muted);
-        font-size: 0.85rem;
+        letter-spacing: .03em;
       }
+
       .badge {
         display: inline-block;
-        font-size: 0.78rem;
-        color: var(--muted);
+        font-family: var(--font-body);
+        font-size: .8rem;
+        font-weight: 600;
+        color: var(--accent);
         white-space: nowrap;
       }
       .cat {
         display: inline-block;
-        font-size: 0.72rem;
+        font-family: var(--font-body);
+        font-size: .72rem;
         text-transform: uppercase;
-        letter-spacing: 0.04em;
-        color: var(--accent);
-        background: var(--accent-bg);
-        padding: 0.1rem 0.5rem;
-        border-radius: 999px;
+        letter-spacing: .12em;
+        color: var(--muted);
       }
       footer.site-foot {
         margin-top: 3rem;
         padding-top: 1rem;
         border-top: 1px solid var(--border);
         color: var(--muted);
-        font-size: 0.8rem;
+        font-size: .82rem;
+        font-style: italic;
+        text-align: center;
       }
     </style>
   </head>
@@ -107,7 +120,7 @@ const { title, description } = Astro.props;
     <div class="wrap">
       <header class="site-head">
         <a href="/"><h1>Știri</h1></a>
-        <span class="tagline">agregate din surse românești</span>
+        <span class="tagline">culese din presa Republicii Moldova</span>
       </header>
       <main>
         <slot />

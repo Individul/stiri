@@ -9,7 +9,7 @@ crons = ["*/10 * * * *"]
 [[d1_databases]]
 binding = "DB"
 database_name = "stiri"
-database_id = "TODO"
+database_id = "a83842e4-8f32-430b-a873-94e742e757e6"
 migrations_dir = "migrations"
 
 [[vectorize]]

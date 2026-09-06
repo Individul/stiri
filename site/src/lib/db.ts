@@ -28,6 +28,35 @@ export async function topClusters(
   return results;
 }
 
+// --- Administrarea surselor (pagina /admin, protejata cu Cloudflare Access) ---
+
+export interface SourceRow {
+  id: number; name: string; site_url: string; feed_url: string;
+  enabled: number; created_at: string; articole: number;
+}
+
+export async function listSources(db: D1Database): Promise<SourceRow[]> {
+  const { results } = await db.prepare(
+    `SELECT s.id, s.name, s.site_url, s.feed_url, s.enabled, s.created_at,
+            (SELECT COUNT(*) FROM articles a WHERE a.source_id = s.id) AS articole
+     FROM sources s
+     ORDER BY s.enabled DESC, s.name`
+  ).all<SourceRow>();
+  return results;
+}
+
+export async function addSource(
+  db: D1Database, s: { name: string; site_url: string; feed_url: string }
+): Promise<void> {
+  await db.prepare(
+    "INSERT OR IGNORE INTO sources (name, site_url, feed_url, enabled) VALUES (?, ?, ?, 1)"
+  ).bind(s.name, s.site_url, s.feed_url).run();
+}
+
+export async function setSourceEnabled(db: D1Database, id: number, enabled: boolean): Promise<void> {
+  await db.prepare("UPDATE sources SET enabled = ? WHERE id = ?").bind(enabled ? 1 : 0, id).run();
+}
+
 export interface PopularItem {
   id: number;
   canonical_title: string;

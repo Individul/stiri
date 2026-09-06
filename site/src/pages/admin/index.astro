@@ -1,0 +1,182 @@
+---
+import { env } from "cloudflare:workers";
+import Base from "../../layouts/Base.astro";
+import { listSources, addSource, setSourceEnabled, type SourceRow } from "../../lib/db";
+import { verificaAccessJwt } from "../../lib/access";
+
+const { DB, ACCESS_TEAM_DOMAIN, ACCESS_AUD, ADMIN_TOKEN } = env as unknown as {
+  DB: D1Database; ACCESS_TEAM_DOMAIN?: string; ACCESS_AUD?: string; ADMIN_TOKEN?: string;
+};
+
+const text = (s: string, status: number) =>
+  new Response(s, { status, headers: { "content-type": "text/plain; charset=utf-8" } });
+
+// Comparatie in timp constant, ca sa nu se poata ghici tokenul dupa durata raspunsului.
+function egal(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let dif = 0;
+  for (let i = 0; i < a.length; i++) dif |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return dif === 0;
+}
+
+function cookie(nume: string): string | null {
+  const brut = Astro.request.headers.get("cookie") ?? "";
+  for (const p of brut.split(";")) {
+    const [k, ...v] = p.trim().split("=");
+    if (k === nume) return decodeURIComponent(v.join("="));
+  }
+  return null;
+}
+
+// Doua metode acceptate. Esueaza inchis daca niciuna nu e configurata.
+let cine: string | null = null;
+const jwt = Astro.request.headers.get("Cf-Access-Jwt-Assertion");
+
+if (ACCESS_TEAM_DOMAIN && ACCESS_AUD && jwt) {
+  // 1) Cloudflare Access (cel mai bun; cere site-ul pe un domeniu din contul tau)
+  const v = await verificaAccessJwt(jwt, ACCESS_TEAM_DOMAIN, ACCESS_AUD);
+  if (!v.ok) return text(`Acces interzis: ${v.motiv}.\n`, 403);
+  cine = v.email;
+} else if (ADMIN_TOKEN) {
+  // 2) Token secret — merge si pe *.workers.dev. Prima data /admin?k=TOKEN, apoi cookie.
+  const dinCookie = cookie("admin_token");
+  const dinUrl = Astro.url.searchParams.get("k");
+  if (dinCookie && egal(dinCookie, ADMIN_TOKEN)) {
+    cine = "token";
+  } else if (dinUrl && egal(dinUrl, ADMIN_TOKEN)) {
+    return new Response(null, {
+      status: 302,
+      headers: {
+        Location: "/admin",
+        "Set-Cookie": `admin_token=${encodeURIComponent(ADMIN_TOKEN)}; HttpOnly; Secure; SameSite=Lax; Path=/admin; Max-Age=2592000`,
+      },
+    });
+  } else {
+    return text("Acces interzis.\n", 403);
+  }
+} else {
+  return text(
+    "Admin neconfigurat. Setează ADMIN_TOKEN (wrangler secret put ADMIN_TOKEN)\n" +
+    "sau ACCESS_TEAM_DOMAIN + ACCESS_AUD pentru Cloudflare Access.\n", 503);
+}
+
+// Verifica feed-ul inainte de adaugare: trebuie sa raspunda 200 si sa contina articole.
+async function verificaFeed(url: string): Promise<{ ok: boolean; mesaj: string }> {
+  try {
+    const res = await fetch(url, { headers: { "user-agent": "StiriMD/1.0" } });
+    if (!res.ok) return { ok: false, mesaj: `feed-ul a răspuns ${res.status}` };
+    const text = await res.text();
+    const n = (text.match(/<item[\s>]|<entry[\s>]/gi) ?? []).length;
+    if (n === 0) return { ok: false, mesaj: "feed-ul nu conține articole (nu pare RSS/Atom)" };
+    return { ok: true, mesaj: `${n} articole în feed` };
+  } catch (e: any) {
+    return { ok: false, mesaj: `nu pot accesa feed-ul: ${e?.message ?? e}` };
+  }
+}
+
+if (Astro.request.method === "POST") {
+  const fd = await Astro.request.formData();
+  const actiune = String(fd.get("actiune") ?? "");
+
+  if (actiune === "adauga") {
+    const name = String(fd.get("name") ?? "").trim();
+    const site_url = String(fd.get("site_url") ?? "").trim();
+    const feed_url = String(fd.get("feed_url") ?? "").trim();
+    if (!name || !site_url || !feed_url) {
+      return Astro.redirect("/admin?err=" + encodeURIComponent("Completează toate câmpurile"));
+    }
+    const v = await verificaFeed(feed_url);
+    if (!v.ok) return Astro.redirect("/admin?err=" + encodeURIComponent(`Feed respins: ${v.mesaj}`));
+    await addSource(DB, { name, site_url, feed_url });
+    return Astro.redirect("/admin?ok=" + encodeURIComponent(`Adăugat „${name}” (${v.mesaj})`));
+  }
+
+  if (actiune === "comuta") {
+    const id = Number(fd.get("id"));
+    const activ = String(fd.get("activ")) === "1";
+    if (Number.isInteger(id)) await setSourceEnabled(DB, id, activ);
+    return Astro.redirect("/admin?ok=" + encodeURIComponent(activ ? "Sursă activată" : "Sursă dezactivată"));
+  }
+}
+
+const surse: SourceRow[] = await listSources(DB);
+const active = surse.filter((s) => s.enabled).length;
+const ok = Astro.url.searchParams.get("ok");
+const err = Astro.url.searchParams.get("err");
+---
+
+<Base title="Administrare surse — Știri">
+  <div class="container">
+    <div class="page-head">
+      <span class="kicker">Administrare</span>
+      <h1>Surse de știri</h1>
+      <p>{active} active din {surse.length} · autentificat ca {cine}</p>
+    </div>
+
+    {ok && <p class="mesaj ok">{ok}</p>}
+    {err && <p class="mesaj err">{err}</p>}
+
+    <section class="section">
+      <div class="sec-head"><h2>Adaugă o sursă</h2></div>
+      <form method="post" class="form-sursa">
+        <input type="hidden" name="actiune" value="adauga" />
+        <input name="name" placeholder="Nume (ex. Ziarul Național)" required />
+        <input name="site_url" type="url" placeholder="https://site.md" required />
+        <input name="feed_url" type="url" placeholder="https://site.md/feed/" required />
+        <button type="submit">Verifică și adaugă</button>
+      </form>
+      <p class="ajutor">Feed-ul e testat înainte de adăugare: trebuie să răspundă 200 și să conțină articole.</p>
+    </section>
+
+    <section class="section">
+      <div class="sec-head"><h2>Sursele existente</h2></div>
+      <table class="tabel">
+        <thead><tr><th>Sursă</th><th>Feed</th><th class="r">Articole</th><th class="r">Stare</th></tr></thead>
+        <tbody>
+          {surse.map((s) => (
+            <tr class={s.enabled ? "" : "inactiva"}>
+              <td>
+                <strong>{s.name}</strong><br />
+                <a href={s.site_url} target="_blank" rel="noopener" class="mic">{s.site_url}</a>
+              </td>
+              <td class="mono mic">{s.feed_url}</td>
+              <td class="r">{s.articole}</td>
+              <td class="r">
+                <form method="post">
+                  <input type="hidden" name="actiune" value="comuta" />
+                  <input type="hidden" name="id" value={s.id} />
+                  <input type="hidden" name="activ" value={s.enabled ? "0" : "1"} />
+                  <button type="submit" class={s.enabled ? "buton-off" : "buton-on"}>
+                    {s.enabled ? "Dezactivează" : "Activează"}
+                  </button>
+                </form>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+
+    <style>
+      .mesaj { padding: 10px 14px; font-size: 13.5px; border: 1px solid var(--hairline); margin: 16px 0; }
+      .mesaj.ok { border-color: #22a06b; color: #17754e; }
+      .mesaj.err { border-color: var(--accent); color: var(--accent); }
+      .form-sursa { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+      .form-sursa input { flex: 1 1 200px; font: inherit; font-size: 14px; padding: 8px 12px;
+        border: 1px solid var(--hairline); border-radius: 6px; background: #fff; color: var(--ink); }
+      .form-sursa button { font: inherit; font-size: 13px; font-weight: 700; padding: 8px 18px;
+        border: 1px solid var(--ink); border-radius: 6px; background: var(--ink); color: #fff; cursor: pointer; }
+      .ajutor { font-size: 12px; color: var(--muted); margin-top: 8px; }
+      .tabel { width: 100%; border-collapse: collapse; font-size: 13.5px; margin-top: 10px; }
+      .tabel th, .tabel td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--hairline); vertical-align: top; }
+      .tabel th.r, .tabel td.r { text-align: right; }
+      .tabel tr.inactiva { opacity: 0.5; }
+      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; word-break: break-all; }
+      .mic { font-size: 11.5px; color: var(--muted); }
+      .buton-off, .buton-on { font: inherit; font-size: 11.5px; font-weight: 700; padding: 4px 10px;
+        border-radius: 999px; cursor: pointer; white-space: nowrap; }
+      .buton-off { border: 1px solid var(--hairline); background: transparent; color: var(--muted); }
+      .buton-on { border: 1px solid var(--ink); background: var(--ink); color: #fff; }
+    </style>
+  </div>
+</Base>

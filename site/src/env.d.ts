@@ -9,5 +9,10 @@
 declare namespace Cloudflare {
   interface Env {
     DB: D1Database;
+    // Configurate pe Worker dupa crearea aplicatiei Cloudflare Access.
+    // Fara ele, /admin raspunde 503 (esueaza inchis).
+    ACCESS_TEAM_DOMAIN?: string;
+    ACCESS_AUD?: string;
+    ADMIN_TOKEN?: string;
   }
 }

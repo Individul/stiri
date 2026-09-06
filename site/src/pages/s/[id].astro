@@ -2,7 +2,7 @@
 import { env } from "cloudflare:workers";
 import Base from "../../layouts/Base.astro";
 import { clusterById, clusterSources } from "../../lib/db";
-import { formatSourceCount } from "../../lib/format";
+import { formatSourceCount, relTime, parseDbDate } from "../../lib/format";
 
 const { DB } = env;
 
@@ -20,36 +20,21 @@ const paragraphs = cluster.summary_md
   .map((p) => p.trim())
   .filter((p) => p.length > 0);
 
-function parse(iso: string | null): Date | null {
-  if (!iso) return null;
-  const d = new Date(/[T]/.test(iso) ? iso : iso.replace(" ", "T") + "Z");
-  return Number.isNaN(d.getTime()) ? null : d;
-}
 function fmtDate(iso: string | null): string {
-  const d = parse(iso);
+  const d = parseDbDate(iso);
   return d ? d.toLocaleDateString("ro-RO", { day: "numeric", month: "long", year: "numeric" }) : "";
 }
 function fmtDateTime(iso: string | null): string {
-  const d = parse(iso);
+  const d = parseDbDate(iso);
   if (!d) return "";
   const date = d.toLocaleDateString("ro-RO", { weekday: "long", day: "numeric", month: "long" });
   const time = d.toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" });
   return `${date} la ${time}`;
 }
-function relTime(iso: string | null): string {
-  const d = parse(iso);
-  if (!d) return "";
-  const min = Math.max(0, Math.round((Date.now() - d.getTime()) / 60000));
-  if (min < 1) return "acum câteva secunde";
-  if (min < 60) return `acum ${min} ${min === 1 ? "minut" : "minute"}`;
-  const h = Math.round(min / 60);
-  if (h < 24) return `acum ${h} ${h === 1 ? "oră" : "ore"}`;
-  const zile = Math.round(h / 24);
-  return `acum ${zile} ${zile === 1 ? "zi" : "zile"}`;
-}
 ---
 
 <Base title={`${cluster.canonical_title} — Știri`} description={paragraphs[0]?.slice(0, 160)}>
+  <div class="container">
   <article class="reader">
     <a class="reader-back" href="/">← Prima pagină</a>
     <span class="kicker">{cluster.category}</span>
@@ -81,4 +66,5 @@ function relTime(iso: string | null): string {
       articolele integrale aparțin în totalitate surselor originale.
     </p>
   </article>
+  </div>
 </Base>

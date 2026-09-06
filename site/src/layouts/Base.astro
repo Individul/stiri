@@ -45,6 +45,7 @@ const homeActive = onHome && !curCat && !curQ;
       }
       a { color: inherit; text-decoration: none; }
       .container { max-width: 660px; margin: 0 auto; padding: 0 20px; }
+      .container-larg { max-width: 1080px; }
 
       /* Masthead */
       .masthead { text-align: center; padding: 46px 0 0; }
@@ -206,6 +207,51 @@ const homeActive = onHome && !curCat && !curQ;
       .footer-text { margin: 0 auto 14px; font-size: 12.5px; line-height: 1.65; color: var(--muted); text-align: center; max-width: 480px; }
       .footer-sources { font-size: 11px; color: var(--muted); text-align: center; letter-spacing: 0.04em; line-height: 1.8; opacity: 0.75; }
 
+      /* Panou „Cele mai populare” */
+      .home-grid { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 48px; align-items: start; }
+      .panou-popular { border-top: 2px solid var(--ink); padding-top: 10px; position: sticky; top: 24px; }
+      .panou-popular h2 {
+        margin: 0; font-family: var(--sans); font-size: 14px; font-weight: 700;
+        text-transform: uppercase; letter-spacing: 0.18em;
+      }
+      .taburi { display: flex; gap: 6px; margin: 12px 0 6px; }
+      .tab {
+        font: inherit; font-size: 12px; font-weight: 700; padding: 4px 12px;
+        border: 1px solid var(--hairline); border-radius: 999px; background: transparent;
+        color: var(--muted); cursor: pointer; user-select: none;
+      }
+      .tab:hover { border-color: var(--muted); }
+      .tab.activ { background: var(--ink); border-color: var(--ink); color: #fff; }
+      .popular-lista { list-style: none; margin: 0; padding: 0; }
+      .popular-lista li { border-bottom: 1px solid var(--hairline); }
+      .popular-lista a { display: flex; gap: 12px; padding: 11px 0; }
+      .popular-lista a:hover .pop-titlu { text-decoration: underline; text-underline-offset: 3px; }
+      .pop-rank {
+        font-family: var(--serif); font-size: 19px; font-weight: 700;
+        color: var(--accent); min-width: 20px; line-height: 1.2;
+      }
+      .pop-corp { flex: 1; min-width: 0; }
+      .pop-titlu { display: block; font-size: 13.5px; line-height: 1.4; }
+      .pop-meta { display: block; font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+      .pop-gol { color: var(--muted); font-size: 13px; padding: 12px 0; }
+
+      /* Taburi fara JavaScript (radio + label) */
+      .pop-radio { position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none; }
+      .pop-panou-lista { display: none; }
+      #pop-48:checked ~ .lista-48,
+      #pop-7:checked ~ .lista-7,
+      #pop-30:checked ~ .lista-30 { display: block; }
+      #pop-48:checked ~ .taburi label[for="pop-48"],
+      #pop-7:checked ~ .taburi label[for="pop-7"],
+      #pop-30:checked ~ .taburi label[for="pop-30"] {
+        background: var(--ink); border-color: var(--ink); color: #fff;
+      }
+
+      @media (max-width: 1000px) {
+        .home-grid { grid-template-columns: 1fr; gap: 0; }
+        .panou-popular { position: static; margin-top: 44px; }
+      }
+
       /* Responsiv */
       @media (max-width: 620px) {
         .masthead { padding-top: 34px; }
@@ -217,29 +263,31 @@ const homeActive = onHome && !curCat && !curQ;
     </style>
   </head>
   <body>
-    <div class="container">
-      <header class="masthead">
+    <header class="masthead">
+      <div class="container">
         <a class="brand" href="/">Știri<span class="brand-dot">.</span></a>
         <p class="tagline">Din presa Republicii Moldova</p>
         <form class="cauta" action="/" method="get" role="search">
           <input type="search" name="q" value={curQ} placeholder="caută în știri…" aria-label="Caută în știri" />
           <button type="submit">caută</button>
         </form>
-        <nav class="nav"><div class="nav-in">
-          <a href="/" class={homeActive ? "active" : ""}>Acasă</a>
-          {CATS.map((c) => (
-            <a href={`/?cat=${encodeURIComponent(c)}`} class={c === curCat ? "active" : ""}>{c}</a>
-          ))}
-        </div></nav>
-      </header>
-      <main>
-        <slot />
-      </main>
-      <footer class="footer">
+      </div>
+      <nav class="nav"><div class="nav-in">
+        <a href="/" class={homeActive ? "active" : ""}>Acasă</a>
+        {CATS.map((c) => (
+          <a href={`/?cat=${encodeURIComponent(c)}`} class={c === curCat ? "active" : ""}>{c}</a>
+        ))}
+      </div></nav>
+    </header>
+    <main>
+      <slot />
+    </main>
+    <footer class="footer">
+      <div class="container">
         <p class="footer-brand">Știri.</p>
         <p class="footer-text">Rezumate generate automat din mai multe surse. Verificați întotdeauna sursele originale.</p>
         <p class="footer-sources">Ziarul de Gardă · TV8 · NewsMaker · Unimedia · Deschide.md · IPN · Moldova1</p>
-      </footer>
-    </div>
+      </div>
+    </footer>
   </body>
 </html>

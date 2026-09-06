@@ -28,6 +28,30 @@ export async function topClusters(
   return results;
 }
 
+export interface PopularItem {
+  id: number;
+  canonical_title: string;
+  source_count: number;
+  last_updated_at: string;
+}
+
+// Cele mai populare = cele mai multe surse distincte, intr-o fereastra de timp.
+// `interval` e un modificator SQLite, ex. '-48 hours', '-7 days', '-30 days'.
+export async function popularClusters(
+  db: D1Database, interval: string, limit = 7
+): Promise<PopularItem[]> {
+  const { results } = await db.prepare(
+    `SELECT id, canonical_title, source_count, last_updated_at
+     FROM clusters
+     WHERE summary_md IS NOT NULL AND canonical_title IS NOT NULL
+       AND source_count > 0
+       AND last_updated_at >= datetime('now', ?)
+     ORDER BY source_count DESC, last_updated_at DESC
+     LIMIT ?`
+  ).bind(interval, limit).all<PopularItem>();
+  return results;
+}
+
 export async function distinctCategories(db: D1Database): Promise<string[]> {
   const { results } = await db.prepare(
     "SELECT DISTINCT category FROM clusters WHERE category IS NOT NULL AND summary_md IS NOT NULL ORDER BY category"

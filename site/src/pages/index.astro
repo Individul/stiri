@@ -1,8 +1,8 @@
 ---
 import { env } from "cloudflare:workers";
 import Base from "../layouts/Base.astro";
-import { topClusters } from "../lib/db";
-import { formatSourceCount, rankScore } from "../lib/format";
+import { topClusters, popularClusters, type PopularItem } from "../lib/db";
+import { formatSourceCount, rankScore, relTime } from "../lib/format";
 
 const { DB } = env;
 const category = Astro.url.searchParams.get("cat") ?? undefined;
@@ -13,6 +13,18 @@ const cards = (await topClusters(DB, category, q))
   .sort((a, b) => rankScore(b.source_count, b.last_updated_at) - rankScore(a.source_count, a.last_updated_at))
   .slice(0, 50);
 
+// Cele mai populare = cele mai multe surse, pe trei ferestre de timp.
+const [pop48, pop7, pop30] = await Promise.all([
+  popularClusters(DB, "-48 hours", 7),
+  popularClusters(DB, "-7 days", 7),
+  popularClusters(DB, "-30 days", 7),
+]);
+const perioade: { id: string; lista: PopularItem[]; cls: string }[] = [
+  { id: "pop-48", lista: pop48, cls: "lista-48" },
+  { id: "pop-7", lista: pop7, cls: "lista-7" },
+  { id: "pop-30", lista: pop30, cls: "lista-30" },
+];
+
 const now = new Date().toLocaleDateString("ro-RO", {
   weekday: "long", day: "numeric", month: "long",
 });
@@ -22,40 +34,75 @@ const rest = filtered ? cards : cards.slice(1);
 ---
 
 <Base title="Știri — din presa Republicii Moldova">
-  {filtered ? (
-    <div class="page-head">
-      <span class="kicker">{q ? "Căutare" : "Categorie"}</span>
-      <h1>{q ? <>„{q}”</> : category}</h1>
-      <p>{cards.length} {cards.length === 1 ? "știre" : "știri"} · <a class="clear" href="/">✕ resetează</a></p>
+  <div class="container container-larg home-grid">
+    <div>
+      {filtered ? (
+        <div class="page-head">
+          <span class="kicker">{q ? "Căutare" : "Categorie"}</span>
+          <h1>{q ? <>„{q}”</> : category}</h1>
+          <p>{cards.length} {cards.length === 1 ? "știre" : "știri"} · <a class="clear" href="/">✕ resetează</a></p>
+        </div>
+      ) : (
+        <div class="updated">Actualizat automat · {now}</div>
+      )}
+
+      {cards.length === 0 && (
+        <p class="gol">Nicio știre {q ? "pentru această căutare" : category ? "în această categorie" : "disponibilă"}.</p>
+      )}
+
+      {lead && (
+        <a class="lead" href={`/s/${lead.id}`}>
+          <span class="kicker">{lead.category}</span>
+          <h2 class="lead-title">{lead.canonical_title}</h2>
+          <p class="lead-sum">{lead.lead}…</p>
+          <div class="art-meta">
+            <span class="art-left"><span class="theme">{lead.category}</span></span>
+            <span class="surse-n">{formatSourceCount(lead.source_count)}</span>
+          </div>
+        </a>
+      )}
+
+      {rest.map((c) => (
+        <a class="art" href={`/s/${c.id}`}>
+          <h3 class="art-title">{c.canonical_title}</h3>
+          <p class="art-sum">{c.lead}</p>
+          <div class="art-meta">
+            <span class="art-left"><span class="theme">{c.category}</span></span>
+            <span class="surse-n">{formatSourceCount(c.source_count)}</span>
+          </div>
+        </a>
+      ))}
     </div>
-  ) : (
-    <div class="updated">Actualizat automat · {now}</div>
-  )}
 
-  {cards.length === 0 && (
-    <p class="gol">Nicio știre {q ? "pentru această căutare" : category ? "în această categorie" : "disponibilă"}.</p>
-  )}
-
-  {lead && (
-    <a class="lead" href={`/s/${lead.id}`}>
-      <span class="kicker">{lead.category}</span>
-      <h2 class="lead-title">{lead.canonical_title}</h2>
-      <p class="lead-sum">{lead.lead}…</p>
-      <div class="art-meta">
-        <span class="art-left"><span class="theme">{lead.category}</span></span>
-        <span class="surse-n">{formatSourceCount(lead.source_count)}</span>
+    <aside class="panou-popular">
+      <h2>Cele mai populare</h2>
+      <input class="pop-radio" type="radio" name="pop" id="pop-48" aria-label="Ultimele 48 de ore" checked />
+      <input class="pop-radio" type="radio" name="pop" id="pop-7" aria-label="Ultimele 7 zile" />
+      <input class="pop-radio" type="radio" name="pop" id="pop-30" aria-label="Ultimele 30 de zile" />
+      <div class="taburi">
+        <label class="tab" for="pop-48">48 ore</label>
+        <label class="tab" for="pop-7">7 zile</label>
+        <label class="tab" for="pop-30">30 zile</label>
       </div>
-    </a>
-  )}
-
-  {rest.map((c) => (
-    <a class="art" href={`/s/${c.id}`}>
-      <h3 class="art-title">{c.canonical_title}</h3>
-      <p class="art-sum">{c.lead}</p>
-      <div class="art-meta">
-        <span class="art-left"><span class="theme">{c.category}</span></span>
-        <span class="surse-n">{formatSourceCount(c.source_count)}</span>
-      </div>
-    </a>
-  ))}
+      {perioade.map((p) => (
+        <ul class={`popular-lista pop-panou-lista ${p.cls}`}>
+          {p.lista.length === 0 ? (
+            <li class="pop-gol">Nicio știre în această perioadă.</li>
+          ) : (
+            p.lista.map((it, i) => (
+              <li>
+                <a href={`/s/${it.id}`}>
+                  <span class="pop-rank">{i + 1}</span>
+                  <span class="pop-corp">
+                    <span class="pop-titlu">{it.canonical_title}</span>
+                    <span class="pop-meta">{formatSourceCount(it.source_count)} · {relTime(it.last_updated_at)}</span>
+                  </span>
+                </a>
+              </li>
+            ))
+          )}
+        </ul>
+      ))}
+    </aside>
+  </div>
 </Base>

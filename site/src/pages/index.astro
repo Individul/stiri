@@ -2,7 +2,7 @@
 import { env } from "cloudflare:workers";
 import Base from "../layouts/Base.astro";
 import { topClusters, popularClusters, type PopularItem } from "../lib/db";
-import { formatSourceCount, rankScore, relTime } from "../lib/format";
+import { formatSourceCount, rankScore, relTime, fmtDataOra } from "../lib/format";
 
 const { DB } = env;
 const category = Astro.url.searchParams.get("cat") ?? undefined;
@@ -34,9 +34,10 @@ const perioade: { id: string; lista: PopularItem[]; cls: string }[] = [
   { id: "pop-30", lista: pop30, cls: "lista-30" },
 ];
 
-const now = new Date().toLocaleDateString("ro-RO", {
-  weekday: "long", day: "numeric", month: "long",
-});
+// Ora ultimei actualizari reale a stirilor (toate[] e ordonat cronologic),
+// nu ora randarii paginii. Afisata in fusul Moldovei.
+const ultimaActualizare = toate[0]?.last_updated_at ?? new Date().toISOString();
+const actualizat = fmtDataOra(ultimaActualizare);
 
 const lead = leadCandidat;
 const rest = lead ? cards.filter((c) => c.id !== lead.id) : cards;
@@ -52,7 +53,7 @@ const rest = lead ? cards.filter((c) => c.id !== lead.id) : cards;
           <p>{cards.length} {cards.length === 1 ? "știre" : "știri"} · <a class="clear" href="/">✕ resetează</a></p>
         </div>
       ) : (
-        <div class="updated">Actualizat automat · {now}</div>
+        <div class="updated">Actualizat automat · {actualizat}</div>
       )}
 
       {cards.length === 0 && (

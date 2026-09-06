@@ -2,7 +2,7 @@
 import { env } from "cloudflare:workers";
 import Base from "../../layouts/Base.astro";
 import { clusterById, clusterSources } from "../../lib/db";
-import { formatSourceCount, relTime, parseDbDate } from "../../lib/format";
+import { formatSourceCount, relTime, fmtData, fmtDataOra } from "../../lib/format";
 
 const { DB } = env;
 
@@ -20,17 +20,6 @@ const paragraphs = cluster.summary_md
   .map((p) => p.trim())
   .filter((p) => p.length > 0);
 
-function fmtDate(iso: string | null): string {
-  const d = parseDbDate(iso);
-  return d ? d.toLocaleDateString("ro-RO", { day: "numeric", month: "long", year: "numeric" }) : "";
-}
-function fmtDateTime(iso: string | null): string {
-  const d = parseDbDate(iso);
-  if (!d) return "";
-  const date = d.toLocaleDateString("ro-RO", { weekday: "long", day: "numeric", month: "long" });
-  const time = d.toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" });
-  return `${date} la ${time}`;
-}
 ---
 
 <Base title={`${cluster.canonical_title} — Știri`} description={paragraphs[0]?.slice(0, 160)}>
@@ -41,7 +30,7 @@ function fmtDateTime(iso: string | null): string {
     <h1 class="reader-title">{cluster.canonical_title}</h1>
 
     <div class="reader-meta">
-      <span>{formatSourceCount(cluster.source_count)} · {relTime(cluster.last_updated_at)} · {fmtDateTime(cluster.last_updated_at)}</span>
+      <span>{formatSourceCount(cluster.source_count)} · {relTime(cluster.last_updated_at)} · {fmtDataOra(cluster.last_updated_at)}</span>
       <span class="ai-tag">Sumar automat</span>
     </div>
 
@@ -55,7 +44,7 @@ function fmtDateTime(iso: string | null): string {
         {sources.map((s) => (
           <a class="sursa" href={s.url} target="_blank" rel="noopener">
             <span class="sursa-title">{s.title}</span>
-            <span class="sursa-meta">{s.source}{s.published_at && <> · {fmtDate(s.published_at)}</>}</span>
+            <span class="sursa-meta">{s.source}{s.published_at && <> · {fmtData(s.published_at)}</>}</span>
           </a>
         ))}
       </section>

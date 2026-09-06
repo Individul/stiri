@@ -24,6 +24,31 @@ export function parseDbDate(iso: string | null): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
+// Worker-ul ruleaza in UTC, iar D1 stocheaza tot UTC. Fara fus explicit am afisa
+// ore cu 3 ore in urma fata de ora reala din Moldova.
+export const FUS = "Europe/Chisinau";
+
+// „duminică, 6 septembrie la 19:04”
+export function fmtDataOra(iso: string | null): string {
+  const d = parseDbDate(iso);
+  if (!d) return "";
+  const data = d.toLocaleDateString("ro-RO", {
+    timeZone: FUS, weekday: "long", day: "numeric", month: "long",
+  });
+  const ora = d.toLocaleTimeString("ro-RO", {
+    timeZone: FUS, hour: "2-digit", minute: "2-digit",
+  });
+  return `${data} la ${ora}`;
+}
+
+// „6 septembrie 2026”
+export function fmtData(iso: string | null): string {
+  const d = parseDbDate(iso);
+  return d
+    ? d.toLocaleDateString("ro-RO", { timeZone: FUS, day: "numeric", month: "long", year: "numeric" })
+    : "";
+}
+
 export function relTime(iso: string | null, now: Date = new Date()): string {
   const d = parseDbDate(iso);
   if (!d) return "";

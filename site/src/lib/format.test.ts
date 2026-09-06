@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatSourceCount, rankScore } from "./format";
+import { formatSourceCount, rankScore, fmtDataOra, fmtData } from "./format";
 
 describe("formatSourceCount", () => {
   it("foloseste regula romaneasca pentru 'de'", () => {
@@ -28,5 +28,19 @@ describe("rankScore", () => {
   it("parseaza formatul D1 (fara T/Z) ca UTC", () => {
     // La momentul exact, decaderea = 1, deci scorul = numarul de surse.
     expect(rankScore(7, iso, now)).toBeCloseTo(7, 5);
+  });
+});
+
+describe("fus orar Moldova", () => {
+  it("afiseaza ora locala, nu UTC (+3 vara)", () => {
+    // D1 scrie UTC: 16:04 UTC = 19:04 la Chisinau (EEST)
+    expect(fmtDataOra("2026-09-06 16:04:00")).toContain("19:04");
+    expect(fmtDataOra("2026-09-06 16:04:00")).toContain("6 septembrie");
+  });
+  it("data fara ora", () => {
+    expect(fmtData("2026-09-06 16:04:00")).toBe("6 septembrie 2026");
+  });
+  it("intoarce sir gol pentru valoare lipsa", () => {
+    expect(fmtDataOra(null)).toBe("");
   });
 });

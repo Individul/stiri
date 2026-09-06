@@ -111,5 +111,5 @@ Gata și testat (fără cont necesar): pipeline complet (colectare → dedup →
 D1, seed, site-ul de citit. Rămâne de făcut de tine: **provisioning-ul Cloudflare de mai sus**,
 migrare/seed pe remote, deploy. Opțional: admin surse (Faza 7).
 
-Detalii: [`docs/plans/2026-09-06-stiri-md-design.md`](../../docs/plans/2026-09-06-stiri-md-design.md)
-și [`docs/plans/2026-09-06-stiri-md.md`](../../docs/plans/2026-09-06-stiri-md.md).
+Detalii: [`docs/plans/2026-09-06-stiri-md-design.md`](docs/plans/2026-09-06-stiri-md-design.md)
+și [`docs/plans/2026-09-06-stiri-md.md`](docs/plans/2026-09-06-stiri-md.md).

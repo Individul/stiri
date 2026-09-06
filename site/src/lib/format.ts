@@ -28,10 +28,10 @@ export function relTime(iso: string | null, now: Date = new Date()): string {
   const d = parseDbDate(iso);
   if (!d) return "";
   const min = Math.max(0, Math.round((now.getTime() - d.getTime()) / 60000));
-  if (min < 1) return "acum câteva secunde";
-  if (min < 60) return `acum ${min} ${min === 1 ? "minut" : "minute"}`;
+  if (min < 1) return "chiar acum";
+  if (min < 60) return `acum ${min} min`;
   const h = Math.round(min / 60);
-  if (h < 24) return `acum ${h} ${h === 1 ? "oră" : "ore"}`;
+  if (h < 24) return h === 1 ? "acum o oră" : `acum ${h} ore`;
   const zile = Math.round(h / 24);
-  return `acum ${zile} ${zile === 1 ? "zi" : "zile"}`;
+  return zile === 1 ? "acum o zi" : `acum ${zile} zile`;
 }

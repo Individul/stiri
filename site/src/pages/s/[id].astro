@@ -1,0 +1,138 @@
+---
+import { env } from "cloudflare:workers";
+import Base from "../../layouts/Base.astro";
+import { clusterById, clusterSources } from "../../lib/db";
+import { formatSourceCount } from "../../lib/format";
+
+const { DB } = env;
+
+const id = Number(Astro.params.id);
+const cluster = Number.isInteger(id) ? await clusterById(DB, id) : null;
+
+if (!cluster) {
+  return new Response("Știrea nu a fost găsită", { status: 404 });
+}
+
+const sources = await clusterSources(DB, id);
+
+// summary_md: paragrafe separate prin linii goale.
+const paragraphs = cluster.summary_md
+  .split(/\n\s*\n/)
+  .map((p) => p.trim())
+  .filter((p) => p.length > 0);
+
+function fmtDate(iso: string | null): string {
+  if (!iso) return "";
+  const normalized = /[T]/.test(iso) ? iso : iso.replace(" ", "T") + "Z";
+  const d = new Date(normalized);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("ro-RO", { day: "numeric", month: "short", year: "numeric" });
+}
+---
+
+<Base title={`${cluster.canonical_title} — Știri`}>
+  <a class="back" href="/">← Toate știrile</a>
+
+  <article>
+    <div class="meta">
+      <span class="cat">{cluster.category}</span>
+      <span class="badge">{formatSourceCount(cluster.source_count)}</span>
+    </div>
+    <h1>{cluster.canonical_title}</h1>
+
+    <div class="summary">
+      {paragraphs.map((p) => <p>{p}</p>)}
+    </div>
+
+    {
+      sources.length > 0 && (
+        <section class="sources">
+          <h2>Surse:</h2>
+          <ul>
+            {sources.map((s) => (
+              <li>
+                <a href={s.url} target="_blank" rel="noopener">
+                  <span class="src-name">{s.source}</span>
+                  <span class="src-title">{s.title}</span>
+                </a>
+                {s.published_at && <span class="src-date">{fmtDate(s.published_at)}</span>}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )
+    }
+  </article>
+
+  <style>
+    .back {
+      display: inline-block;
+      font-size: 0.85rem;
+      text-decoration: none;
+      margin-bottom: 1.25rem;
+    }
+    .back:hover {
+      text-decoration: underline;
+    }
+    .meta {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 0.6rem;
+    }
+    article h1 {
+      font-size: 1.7rem;
+      line-height: 1.25;
+      letter-spacing: -0.02em;
+      margin: 0 0 1.25rem;
+    }
+    .summary p {
+      margin: 0 0 1.1rem;
+      font-size: 1.05rem;
+    }
+    .sources {
+      margin-top: 2.5rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid var(--border);
+    }
+    .sources h2 {
+      font-size: 1rem;
+      margin: 0 0 0.75rem;
+    }
+    .sources ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .sources li {
+      padding: 0.55rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .sources li:last-child {
+      border-bottom: 0;
+    }
+    .sources a {
+      text-decoration: none;
+      display: block;
+    }
+    .sources a:hover .src-title {
+      text-decoration: underline;
+    }
+    .src-name {
+      display: block;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+    }
+    .src-title {
+      color: var(--accent);
+    }
+    .src-date {
+      display: block;
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 0.15rem;
+    }
+  </style>
+</Base>

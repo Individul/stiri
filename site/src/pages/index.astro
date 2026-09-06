@@ -1,0 +1,116 @@
+---
+import { env } from "cloudflare:workers";
+import Base from "../layouts/Base.astro";
+import { topClusters, distinctCategories } from "../lib/db";
+import { formatSourceCount, rankScore } from "../lib/format";
+
+const { DB } = env;
+const category = Astro.url.searchParams.get("cat") ?? undefined;
+
+const cards = (await topClusters(DB, category))
+  .sort((a, b) => rankScore(b.source_count, b.last_updated_at) - rankScore(a.source_count, a.last_updated_at))
+  .slice(0, 50);
+
+const cats = await distinctCategories(DB);
+---
+
+<Base title="Știri — agregate din surse românești">
+  <nav class="cats" aria-label="Filtrează după categorie">
+    <a href="/" class={category ? "" : "active"}>Toate</a>
+    {
+      cats.map((c) => (
+        <a href={`/?cat=${encodeURIComponent(c)}`} class={c === category ? "active" : ""}>
+          {c}
+        </a>
+      ))
+    }
+  </nav>
+
+  {
+    cards.length === 0 ? (
+      <p class="empty">Nicio știre disponibilă{category ? " în această categorie" : ""}.</p>
+    ) : (
+      <ul class="feed">
+        {cards.map((c) => (
+          <li class="card">
+            <a class="card-title" href={`/s/${c.id}`}>
+              {c.canonical_title}
+            </a>
+            <p class="lead">{c.lead}…</p>
+            <div class="meta">
+              <span class="cat">{c.category}</span>
+              <span class="badge">{formatSourceCount(c.source_count)}</span>
+            </div>
+          </li>
+        ))}
+      </ul>
+    )
+  }
+
+  <style>
+    .cats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-bottom: 1.5rem;
+    }
+    .cats a {
+      font-size: 0.82rem;
+      text-decoration: none;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      padding: 0.25rem 0.7rem;
+      border-radius: 999px;
+    }
+    .cats a:hover {
+      color: var(--fg);
+    }
+    .cats a.active {
+      color: #fff;
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    @media (prefers-color-scheme: dark) {
+      .cats a.active {
+        color: #0f1115;
+      }
+    }
+    .feed {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .card {
+      padding: 1.1rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .card:first-child {
+      padding-top: 0;
+    }
+    .card-title {
+      display: inline-block;
+      font-size: 1.15rem;
+      font-weight: 600;
+      line-height: 1.35;
+      text-decoration: none;
+      color: var(--fg);
+      letter-spacing: -0.01em;
+    }
+    .card-title:hover {
+      color: var(--accent);
+    }
+    .lead {
+      margin: 0.4rem 0 0.6rem;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+    .meta {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .empty {
+      color: var(--muted);
+    }
+  </style>
+</Base>

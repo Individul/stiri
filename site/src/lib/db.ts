@@ -7,18 +7,24 @@ export interface ClusterCard {
   lead: string;
 }
 
-export async function topClusters(db: D1Database, category?: string): Promise<ClusterCard[]> {
-  const where = category ? "AND category = ?" : "";
-  const stmt = db.prepare(
+export async function topClusters(
+  db: D1Database, category?: string, q?: string
+): Promise<ClusterCard[]> {
+  const clauses = ["summary_md IS NOT NULL", "canonical_title IS NOT NULL"];
+  const binds: unknown[] = [];
+  if (category) { clauses.push("category = ?"); binds.push(category); }
+  if (q) {
+    clauses.push("(canonical_title LIKE ? OR summary_md LIKE ?)");
+    binds.push(`%${q}%`, `%${q}%`);
+  }
+  const { results } = await db.prepare(
     `SELECT id, canonical_title, category, source_count, last_updated_at,
             substr(summary_md, 1, 240) AS lead
      FROM clusters
-     WHERE summary_md IS NOT NULL AND canonical_title IS NOT NULL ${where}
+     WHERE ${clauses.join(" AND ")}
      ORDER BY last_updated_at DESC
      LIMIT 200`
-  );
-  const bound = category ? stmt.bind(category) : stmt;
-  const { results } = await bound.all<ClusterCard>();
+  ).bind(...binds).all<ClusterCard>();
   return results;
 }
 

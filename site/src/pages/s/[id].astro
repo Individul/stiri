@@ -21,12 +21,32 @@ const paragraphs = cluster.summary_md
   .map((p) => p.trim())
   .filter((p) => p.length > 0);
 
+function parse(iso: string | null): Date | null {
+  if (!iso) return null;
+  const d = new Date(/[T]/.test(iso) ? iso : iso.replace(" ", "T") + "Z");
+  return Number.isNaN(d.getTime()) ? null : d;
+}
 function fmtDate(iso: string | null): string {
-  if (!iso) return "";
-  const normalized = /[T]/.test(iso) ? iso : iso.replace(" ", "T") + "Z";
-  const d = new Date(normalized);
-  if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleDateString("ro-RO", { day: "numeric", month: "long", year: "numeric" });
+  const d = parse(iso);
+  return d ? d.toLocaleDateString("ro-RO", { day: "numeric", month: "long", year: "numeric" }) : "";
+}
+function fmtDateTime(iso: string | null): string {
+  const d = parse(iso);
+  if (!d) return "";
+  const date = d.toLocaleDateString("ro-RO", { weekday: "long", day: "numeric", month: "long" });
+  const time = d.toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" });
+  return `${date} la ${time}`;
+}
+function relTime(iso: string | null): string {
+  const d = parse(iso);
+  if (!d) return "";
+  const min = Math.max(0, Math.round((Date.now() - d.getTime()) / 60000));
+  if (min < 1) return "acum câteva secunde";
+  if (min < 60) return `acum ${min} ${min === 1 ? "minut" : "minute"}`;
+  const h = Math.round(min / 60);
+  if (h < 24) return `acum ${h} ${h === 1 ? "oră" : "ore"}`;
+  const zile = Math.round(h / 24);
+  return `acum ${zile} ${zile === 1 ? "zi" : "zile"}`;
 }
 ---
 
@@ -41,8 +61,7 @@ function fmtDate(iso: string | null): string {
 
     <div class="meta-row">
       <span class="meta-info">
-        {formatSourceCount(cluster.source_count)}
-        {fmtDate(cluster.last_updated_at) && <> · {fmtDate(cluster.last_updated_at)}</>}
+        {formatSourceCount(cluster.source_count)} · {relTime(cluster.last_updated_at)} · {fmtDateTime(cluster.last_updated_at)}
       </span>
       <span class="sumar">Sumar automat</span>
     </div>
@@ -91,10 +110,11 @@ function fmtDate(iso: string | null): string {
     .hd .cat { display: block; margin-bottom: 0.5rem; }
     article h1 {
       font-family: var(--font-display);
-      font-size: 2rem;
+      font-size: 30px;
       line-height: 1.18;
+      letter-spacing: -0.3px;
       margin: 0 auto 0;
-      max-width: 620px;
+      max-width: 600px;
     }
 
     .meta-row {
@@ -122,8 +142,8 @@ function fmtDate(iso: string | null): string {
 
     .summary p {
       font-family: var(--font-display);
-      font-size: 1.08rem;
-      line-height: 1.75;
+      font-size: 17px;
+      line-height: 1.7;
       margin: 0 0 1.2rem;
     }
 

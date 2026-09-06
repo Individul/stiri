@@ -208,7 +208,18 @@ const homeActive = onHome && !curCat && !curQ;
       .footer-sources { font-size: 11px; color: var(--muted); text-align: center; letter-spacing: 0.04em; line-height: 1.8; opacity: 0.75; }
 
       /* Panou „Cele mai populare” */
-      .home-grid { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 48px; align-items: start; }
+      /* Coloana de stiri are exact latimea paginii de citire (660px), ca textul sa nu
+         isi schimbe latimea cand deschizi o stire. `minmax` o lasa sa se stranga pe
+         ecrane mai inguste, iar `justify-content` centreaza perechea de coloane. */
+      .home-grid {
+        display: grid;
+        /* 620px = 660px (max-width .container) minus 2×20px padding, adica exact
+           latimea textului din pagina de citire. */
+        grid-template-columns: minmax(0, 620px) 300px;
+        gap: 48px;
+        align-items: start;
+        justify-content: center;
+      }
       .panou-popular { border-top: 2px solid var(--ink); padding-top: 10px; position: sticky; top: 24px; }
       .panou-popular h2 {
         margin: 0; font-family: var(--sans); font-size: 14px; font-weight: 700;

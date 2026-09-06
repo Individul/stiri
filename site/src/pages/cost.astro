@@ -22,6 +22,13 @@ const todayNeurons = todayRow?.neurons ?? 0;
 const todayCalls = todayRow?.calls ?? 0;
 
 const usd = (neurons: number) => (neurons * USD_PER_NEURON).toFixed(2);
+
+// Proiectie lunara pe media zilnica masurata. Alocatia gratuita e ZILNICA,
+// deci se scade din fiecare zi, nu o singura data pe luna.
+const zileCuDate = days.length;
+const medieZi = zileCuDate ? days.reduce((s, d) => s + d.neurons, 0) / zileCuDate : 0;
+const proiectieLunara = 30 * billableForDay(medieZi) * USD_PER_NEURON;
+const ABONAMENT = 5;
 const stepLabel: Record<string, string> = {
   embed: "Embeddings (bge-m3)", confirm: "Confirmare dedup", summarize: "Rezumat",
 };
@@ -48,7 +55,18 @@ const stepLabel: Record<string, string> = {
       <div class="stat-label">Luna curentă</div>
       <div class="stat-big">{Math.round(monthTotal.neurons).toLocaleString("ro-RO")} <span>Neuroni</span></div>
       <div class="stat-sub">{monthTotal.calls.toLocaleString("ro-RO")} apeluri · cost estimat <strong>${usd(monthBillable)}</strong></div>
-      <div class="stat-sub">+ $5/lună abonamentul Workers Paid</div>
+      <div class="stat-sub">consum peste alocația zilnică gratuită</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Proiecție lunară</div>
+      <div class="stat-big">${(proiectieLunara + ABONAMENT).toFixed(2)}</div>
+      <div class="stat-sub">
+        ${proiectieLunara.toFixed(2)} Workers AI + ${ABONAMENT.toFixed(2)} abonament Workers Paid
+      </div>
+      <div class="stat-sub">
+        pe media de {Math.round(medieZi).toLocaleString("ro-RO")} Neuroni/zi
+        ({zileCuDate} {zileCuDate === 1 ? "zi" : "zile"} măsurate)
+      </div>
     </div>
   </div>
 
@@ -92,8 +110,27 @@ const stepLabel: Record<string, string> = {
     </table>
   )}
 
+  <h2>Celelalte servicii Cloudflare</h2>
+  <table>
+    <thead><tr><th>Serviciu</th><th>Consumul nostru</th><th>Inclus în Workers Paid</th><th class="r">Cost</th></tr></thead>
+    <tbody>
+      <tr><td>Workers Paid</td><td>abonament de bază</td><td>10M cereri + 30M CPU-ms/lună</td><td class="r">$5.00</td></tr>
+      <tr><td>Vectorize</td><td>~18M dimensiuni interogate/lună</td><td>50M interogate + 10M stocate</td><td class="r">$0.00</td></tr>
+      <tr><td>Queues</td><td>~150 mii operațiuni/lună</td><td>1M operațiuni/lună</td><td class="r">$0.00</td></tr>
+      <tr><td>D1</td><td>sub 1M rânduri scrise/lună</td><td>50M scrise, 25 mld. citite</td><td class="r">$0.00</td></tr>
+      <tr><td>Workers KV</td><td>practic nefolosit (sesiuni)</td><td>10M citiri/lună</td><td class="r">$0.00</td></tr>
+    </tbody>
+  </table>
+
   <p class="note">
-    Cifra oficială de facturare o vezi în Cloudflare → AI → Workers AI și în Billing.
+    Prețuri verificate în documentația Cloudflare: Workers AI <strong>10.000 Neuroni/zi gratis</strong>
+    (și pe Free, și pe Paid), apoi <strong>$0.011 / 1.000 Neuroni</strong>. Singurul serviciu care
+    generează cost peste abonament este Workers AI — restul rămân confortabil în alocațiile incluse.
+  </p>
+  <p class="note">
+    Două precizări: embeddings-urile (<code>bge-m3</code>) nu raportează Neuroni în răspuns, deci
+    apar cu 0 aici — sunt însă foarte ieftine (~1,5% din total). Iar cifra oficială de facturare o
+    vezi în Cloudflare → AI → Workers AI și în Billing.
   </p>
 
   <style>

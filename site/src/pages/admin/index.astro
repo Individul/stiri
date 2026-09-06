@@ -4,6 +4,7 @@ import Base from "../../layouts/Base.astro";
 import { listSources, addSource, setSourceEnabled, type SourceRow } from "../../lib/db";
 import { verificaAccessJwt } from "../../lib/access";
 import { relTime } from "../../lib/format";
+import { descoperaFeed } from "../../lib/feed-discovery";
 
 const { DB, ACCESS_TEAM_DOMAIN, ACCESS_AUD, ADMIN_TOKEN } = env as unknown as {
   DB: D1Database; ACCESS_TEAM_DOMAIN?: string; ACCESS_AUD?: string; ADMIN_TOKEN?: string;
@@ -80,16 +81,37 @@ if (Astro.request.method === "POST") {
   const actiune = String(fd.get("actiune") ?? "");
 
   if (actiune === "adauga") {
-    const name = String(fd.get("name") ?? "").trim();
     const site_url = String(fd.get("site_url") ?? "").trim();
-    const feed_url = String(fd.get("feed_url") ?? "").trim();
-    if (!name || !site_url || !feed_url) {
-      return Astro.redirect("/admin?err=" + encodeURIComponent("Completează toate câmpurile"));
+    let name = String(fd.get("name") ?? "").trim();
+    let feed_url = String(fd.get("feed_url") ?? "").trim();
+    if (!site_url) {
+      return Astro.redirect("/admin?err=" + encodeURIComponent("Adresa site-ului e obligatorie"));
     }
-    const v = await verificaFeed(feed_url);
-    if (!v.ok) return Astro.redirect("/admin?err=" + encodeURIComponent(`Feed respins: ${v.mesaj}`));
+
+    let detaliu: string;
+    if (feed_url) {
+      // Feed dat manual: doar il verificam.
+      const v = await verificaFeed(feed_url);
+      if (!v.ok) return Astro.redirect("/admin?err=" + encodeURIComponent(`Feed respins: ${v.mesaj}`));
+      detaliu = v.mesaj;
+    } else {
+      // Fara feed: il cautam singuri, din pagina si din caile uzuale.
+      const d = await descoperaFeed(site_url);
+      if (!d.ok) {
+        const scurt = d.incercate.slice(0, 4).map((u) => u.replace(/^https?:\/\/[^/]+/, "")).join(", ");
+        return Astro.redirect("/admin?err=" + encodeURIComponent(
+          `Nu am găsit niciun feed pentru ${site_url}. Am încercat ${d.incercate.length} adrese (${scurt}…). Introdu manual adresa feed-ului.`));
+      }
+      feed_url = d.feedUrl;
+      if (!name && d.nume) name = d.nume;
+      detaliu = `feed găsit automat: ${d.feedUrl} · ${d.articole} articole`;
+    }
+
+    if (!name) {
+      try { name = new URL(site_url).hostname.replace(/^www\./, ""); } catch { name = site_url; }
+    }
     await addSource(DB, { name, site_url, feed_url });
-    return Astro.redirect("/admin?ok=" + encodeURIComponent(`Adăugat „${name}” (${v.mesaj})`));
+    return Astro.redirect("/admin?ok=" + encodeURIComponent(`Adăugat „${name}” — ${detaliu}`));
   }
 
   if (actiune === "comuta") {
@@ -121,12 +143,16 @@ const err = Astro.url.searchParams.get("err");
       <div class="sec-head"><h2>Adaugă o sursă</h2></div>
       <form method="post" class="form-sursa">
         <input type="hidden" name="actiune" value="adauga" />
-        <input name="name" placeholder="Nume (ex. Ziarul Național)" required />
-        <input name="site_url" type="url" placeholder="https://site.md" required />
-        <input name="feed_url" type="url" placeholder="https://site.md/feed/" required />
-        <button type="submit">Verifică și adaugă</button>
+        <input name="site_url" type="url" placeholder="https://site.md  (obligatoriu)" required />
+        <input name="name" placeholder="Nume (opțional — îl aflu din site)" />
+        <input name="feed_url" type="url" placeholder="Feed RSS (opțional — îl caut singur)" />
+        <button type="submit">Găsește feed-ul și adaugă</button>
       </form>
-      <p class="ajutor">Feed-ul e testat înainte de adăugare: trebuie să răspundă 200 și să conțină articole.</p>
+      <p class="ajutor">
+        E de ajuns adresa site-ului: caut feed-ul în pagina lui și în adresele uzuale
+        (/feed/, /rss, /ro/feed/…), îl testez, și preiau și numele publicației.
+        Completează câmpul „Feed RSS” doar dacă știi tu adresa exactă.
+      </p>
     </section>
 
     <section class="section">

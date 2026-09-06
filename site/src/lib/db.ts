@@ -59,3 +59,34 @@ export async function clusterSources(db: D1Database, id: number): Promise<Cluste
   ).bind(id).all<ClusterSource>();
   return results;
 }
+
+// --- Urmarirea cheltuielilor Workers AI ---
+// Cost Cloudflare: $0.011 / 1000 Neuroni. Primii 10.000 Neuroni/zi sunt gratis.
+export const USD_PER_NEURON = 0.011 / 1000;
+export const FREE_NEURONS_PER_DAY = 10000;
+
+export interface UsageRow { step: string; model: string; neurons: number; calls: number; }
+export interface DayUsage { day: string; neurons: number; calls: number; }
+
+export async function usageBreakdown(db: D1Database, day: string): Promise<UsageRow[]> {
+  const { results } = await db.prepare(
+    `SELECT step, model, SUM(neurons) AS neurons, SUM(calls) AS calls
+     FROM usage WHERE day = ? GROUP BY step, model ORDER BY neurons DESC`
+  ).bind(day).all<UsageRow>();
+  return results;
+}
+
+export async function usageSince(db: D1Database, sinceDay: string): Promise<DayUsage[]> {
+  const { results } = await db.prepare(
+    `SELECT day, SUM(neurons) AS neurons, SUM(calls) AS calls
+     FROM usage WHERE day >= ? GROUP BY day ORDER BY day DESC`
+  ).bind(sinceDay).all<DayUsage>();
+  return results;
+}
+
+export async function usageTotalSince(db: D1Database, sinceDay: string): Promise<{ neurons: number; calls: number }> {
+  const row = await db.prepare(
+    "SELECT COALESCE(SUM(neurons),0) AS neurons, COALESCE(SUM(calls),0) AS calls FROM usage WHERE day >= ?"
+  ).bind(sinceDay).first<{ neurons: number; calls: number }>();
+  return row ?? { neurons: 0, calls: 0 };
+}

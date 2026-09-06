@@ -4,6 +4,7 @@ import { extractText } from "./lib/extract";
 import { embed } from "./lib/embeddings";
 import { confirmSameEvent, summarizeCluster } from "./lib/summarize";
 import { decideCluster } from "./lib/cluster";
+import { Meter } from "./lib/meter";
 import * as db from "./lib/db";
 
 export default {
@@ -85,7 +86,9 @@ export async function doEmbed(articleId: number, env: Env) {
     "SELECT title, published_at, COALESCE(extracted_text, excerpt, '') AS text FROM articles WHERE id = ?"
   ).bind(articleId).first<{ title: string; published_at: string | null; text: string }>();
   if (!row) return;
-  const vector = await embed(`${row.title}\n${row.text.slice(0, 2000)}`, env.AI);
+  const meter = new Meter();
+  const vector = await embed(`${row.title}\n${row.text.slice(0, 2000)}`, meter.wrap("embed", env.AI));
+  await meter.flush(env.DB);
   const vectorId = `a${articleId}`;
   // publishedAt = timpul de publicare al articolului (epoch ms), pentru viitoarea fereastra de dedup pe 48h.
   const publishedAt = row.published_at ? Date.parse(row.published_at) : Date.now();
@@ -121,13 +124,14 @@ export async function doCluster(articleId: number, env: Env, values?: number[]) 
     clusterId = await clusterIdOfVector(env, candidate.id);
   } else if (decision === "confirm" && candidate) {
     const other = await articleByVector(env, candidate.id);
-    if (other && await confirmSameEvent(
+    const meter = new Meter();
+    const same = other && await confirmSameEvent(
       { title: row.title, excerpt: row.text.slice(0, 600) },
       { title: other.title, excerpt: other.text.slice(0, 600) },
-      env.AI
-    )) {
-      clusterId = await clusterIdOfVector(env, candidate.id);
-    }
+      meter.wrap("confirm", env.AI)
+    );
+    await meter.flush(env.DB);
+    if (same) clusterId = await clusterIdOfVector(env, candidate.id);
   }
   if (clusterId === null) clusterId = await db.createCluster(env.DB);
   await db.attachToCluster(env.DB, articleId, clusterId);
@@ -150,7 +154,9 @@ async function articleByVector(env: Env, vectorId: string) {
 export async function doSummarize(clusterId: number, env: Env) {
   const members = await db.clusterMembers(env.DB, clusterId);
   if (members.length === 0) return;
-  const summary = await summarizeCluster(members, env.AI);
+  const meter = new Meter();
+  const summary = await summarizeCluster(members, meter.wrap("summarize", env.AI));
+  await meter.flush(env.DB);
   // Numar de SURSE distincte (nu de articole) — asta afiseaza „N surse" in UI.
   const sourceCount = new Set(members.map((m) => m.source)).size;
   // Scorul stocat e semnalul durabil (nr. surse); decaderea pe recenta se aplica la

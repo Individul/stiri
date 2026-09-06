@@ -15,7 +15,6 @@ if (!cluster) {
 
 const sources = await clusterSources(DB, id);
 
-// summary_md: paragrafe separate prin linii goale.
 const paragraphs = cluster.summary_md
   .split(/\n\s*\n/)
   .map((p) => p.trim())
@@ -51,142 +50,35 @@ function relTime(iso: string | null): string {
 ---
 
 <Base title={`${cluster.canonical_title} — Știri`} description={paragraphs[0]?.slice(0, 160)}>
-  <a class="back" href="/">← Prima pagină</a>
+  <article class="reader">
+    <a class="reader-back" href="/">← Prima pagină</a>
+    <span class="kicker">{cluster.category}</span>
+    <h1 class="reader-title">{cluster.canonical_title}</h1>
 
-  <article>
-    <div class="hd">
-      <span class="cat">{cluster.category}</span>
-      <h1>{cluster.canonical_title}</h1>
+    <div class="reader-meta">
+      <span>{formatSourceCount(cluster.source_count)} · {relTime(cluster.last_updated_at)} · {fmtDateTime(cluster.last_updated_at)}</span>
+      <span class="ai-tag">Sumar automat</span>
     </div>
 
-    <div class="meta-row">
-      <span class="meta-info">
-        {formatSourceCount(cluster.source_count)} · {relTime(cluster.last_updated_at)} · {fmtDateTime(cluster.last_updated_at)}
-      </span>
-      <span class="sumar">Sumar automat</span>
-    </div>
-
-    <div class="summary">
+    <div class="reader-body">
       {paragraphs.map((p) => <p>{p}</p>)}
     </div>
 
-    {
-      sources.length > 0 && (
-        <section class="sources">
-          <h2 class="sources-h">Sursele subiectului</h2>
-          <ul>
-            {sources.map((s) => (
-              <li>
-                <a class="src-title" href={s.url} target="_blank" rel="noopener">{s.title}</a>
-                <span class="src-meta">
-                  {s.source}{s.published_at && <> · {fmtDate(s.published_at)}</>}
-                </span>
-              </li>
-            ))}
-          </ul>
-          <p class="note">
-            Rezumatul este generat automat de un sistem AI pe baza articolelor de la sursele
-            de mai sus; articolele integrale aparțin în totalitate surselor originale.
-          </p>
-        </section>
-      )
-    }
+    {sources.length > 0 && (
+      <section class="surse">
+        <div class="sec-head"><h2>Sursele subiectului</h2></div>
+        {sources.map((s) => (
+          <a class="sursa" href={s.url} target="_blank" rel="noopener">
+            <span class="sursa-title">{s.title}</span>
+            <span class="sursa-meta">{s.source}{s.published_at && <> · {fmtDate(s.published_at)}</>}</span>
+          </a>
+        ))}
+      </section>
+    )}
+
+    <p class="reader-legal">
+      Rezumat generat automat de un sistem AI pe baza articolelor de la sursele de mai sus;
+      articolele integrale aparțin în totalitate surselor originale.
+    </p>
   </article>
-
-  <style>
-    .back {
-      display: inline-block;
-      font-size: 0.72rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: var(--muted);
-      text-decoration: none;
-      margin-bottom: 1.5rem;
-    }
-    .back:hover { color: var(--accent); }
-
-    .hd { text-align: center; }
-    .hd .cat { display: block; margin-bottom: 0.5rem; }
-    article h1 {
-      font-family: var(--font-display);
-      font-size: 30px;
-      line-height: 1.18;
-      letter-spacing: -0.3px;
-      margin: 0 auto 0;
-      max-width: 600px;
-    }
-
-    .meta-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
-      margin: 1.5rem 0;
-      padding: 0.7rem 0;
-      border-top: 1px solid var(--border);
-      border-bottom: 1px solid var(--border);
-    }
-    .meta-info { font-size: 0.82rem; color: var(--muted); }
-    .sumar {
-      font-size: 0.68rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--accent);
-      border: 1px solid var(--accent);
-      border-radius: 999px;
-      padding: 0.25rem 0.7rem;
-      white-space: nowrap;
-    }
-
-    .summary p {
-      font-family: var(--font-display);
-      font-size: 17px;
-      line-height: 1.7;
-      margin: 0 0 1.2rem;
-    }
-
-    .sources { margin-top: 2.75rem; }
-    .sources-h {
-      font-family: var(--font-body);
-      font-size: 14px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 2.5px;
-      color: var(--fg);
-      border-top: 2px solid var(--fg);
-      padding-top: 0.7rem;
-      margin: 0 0 0.25rem;
-    }
-    .sources ul { list-style: none; margin: 0; padding: 0; }
-    .sources li {
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      gap: 1.25rem;
-      padding: 0.8rem 0;
-      border-bottom: 1px solid var(--border);
-    }
-    .src-title {
-      color: var(--fg);
-      text-decoration: none;
-      font-size: 15px;
-      line-height: 1.4;
-    }
-    .src-title:hover { color: var(--accent); text-decoration: underline; }
-    .src-meta {
-      flex: none;
-      text-align: right;
-      font-size: 12px;
-      color: var(--muted);
-      white-space: nowrap;
-    }
-    .note {
-      margin-top: 1.5rem;
-      font-size: 0.8rem;
-      color: var(--muted);
-      line-height: 1.6;
-    }
-  </style>
 </Base>

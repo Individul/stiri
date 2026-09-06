@@ -7,77 +7,55 @@ import { formatSourceCount, rankScore } from "../lib/format";
 const { DB } = env;
 const category = Astro.url.searchParams.get("cat") ?? undefined;
 const q = (Astro.url.searchParams.get("q") ?? "").trim() || undefined;
+const filtered = Boolean(q || category);
 
 const cards = (await topClusters(DB, category, q))
   .sort((a, b) => rankScore(b.source_count, b.last_updated_at) - rankScore(a.source_count, a.last_updated_at))
   .slice(0, 50);
+
+const now = new Date().toLocaleDateString("ro-RO", {
+  weekday: "long", day: "numeric", month: "long",
+});
+
+const lead = filtered ? null : cards[0];
+const rest = filtered ? cards : cards.slice(1);
 ---
 
-<Base title="Știri — agregate din surse românești">
-  {(q || category) && (
-    <p class="context">
-      {q ? <>Rezultate pentru „{q}”</> : <>Categoria: {category}</>}
-      <span class="count"> · {cards.length} știri</span>
-      <a class="clear" href="/">✕ resetează</a>
-    </p>
+<Base title="Știri — din presa Republicii Moldova">
+  {filtered ? (
+    <div class="page-head">
+      <span class="kicker">{q ? "Căutare" : "Categorie"}</span>
+      <h1>{q ? <>„{q}”</> : category}</h1>
+      <p>{cards.length} {cards.length === 1 ? "știre" : "știri"} · <a class="clear" href="/">✕ resetează</a></p>
+    </div>
+  ) : (
+    <div class="updated">Actualizat automat · {now}</div>
   )}
 
-  {
-    cards.length === 0 ? (
-      <p class="empty">Nicio știre {q ? "pentru această căutare" : category ? "în această categorie" : "disponibilă"}.</p>
-    ) : (
-      <ul class="feed">
-        {cards.map((c) => (
-          <li class="card">
-            <span class="cat">{c.category}</span>
-            <a class="card-title" href={`/s/${c.id}`}>
-              {c.canonical_title}
-            </a>
-            <p class="lead">{c.lead}…</p>
-            <div class="meta">
-              <span class="badge">{formatSourceCount(c.source_count)}</span>
-            </div>
-          </li>
-        ))}
-      </ul>
-    )
-  }
+  {cards.length === 0 && (
+    <p class="gol">Nicio știre {q ? "pentru această căutare" : category ? "în această categorie" : "disponibilă"}.</p>
+  )}
 
-  <style>
-    .context {
-      font-size: 0.85rem;
-      color: var(--muted);
-      margin: 0 0 1rem;
-      padding-bottom: 0.75rem;
-      border-bottom: 1px solid var(--border);
-    }
-    .context .clear { margin-left: 0.6rem; text-decoration: none; }
-    .context .count { color: var(--muted); }
+  {lead && (
+    <a class="lead" href={`/s/${lead.id}`}>
+      <span class="kicker">{lead.category}</span>
+      <h2 class="lead-title">{lead.canonical_title}</h2>
+      <p class="lead-sum">{lead.lead}…</p>
+      <div class="art-meta">
+        <span class="art-left"><span class="theme">{lead.category}</span></span>
+        <span class="surse-n">{formatSourceCount(lead.source_count)}</span>
+      </div>
+    </a>
+  )}
 
-    .feed { list-style: none; margin: 0; padding: 0; }
-    .card {
-      padding: 1.25rem 0;
-      border-bottom: 1px solid var(--border);
-    }
-    .cat + .card-title { margin-top: 0.25rem; }
-    .card-title {
-      display: inline-block;
-      font-family: var(--font-display);
-      font-size: 22px;
-      font-weight: 700;
-      line-height: 1.25;
-      letter-spacing: -0.3px;
-      text-decoration: none;
-      color: var(--fg);
-    }
-    .card-title:hover { color: var(--accent); }
-    .lead {
-      margin: 0.45rem 0 0.7rem;
-      color: var(--muted);
-      font-size: 0.96rem;
-      line-height: 1.6;
-    }
-    .meta { display: flex; align-items: center; gap: 0.6rem; }
-    .empty { color: var(--muted); }
-  </style>
+  {rest.map((c) => (
+    <a class="art" href={`/s/${c.id}`}>
+      <h3 class="art-title">{c.canonical_title}</h3>
+      <p class="art-sum">{c.lead}</p>
+      <div class="art-meta">
+        <span class="art-left"><span class="theme">{c.category}</span></span>
+        <span class="surse-n">{formatSourceCount(c.source_count)}</span>
+      </div>
+    </a>
+  ))}
 </Base>

@@ -18,169 +18,227 @@ const homeActive = onHome && !curCat && !curQ;
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="color-scheme" content="light dark" />
+    <meta name="color-scheme" content="light" />
     {description && <meta name="description" content={description} />}
     <title>{title}</title>
     <style is:global>
       :root {
-        --bg: #fbfaf7;          /* alb-crem curat, nu galben */
-        --fg: #16131d;
+        --paper: #fbfaf7;
+        --ink: #06001a;
         --muted: #736e7e;
-        --border: #e7e4dd;
-        --border-strong: #cfcabf;
-        --accent: #c1121f;      /* rosu de tipar */
-        /* Titluri: serif de sistem. Text: sans de sistem (lizibil). */
-        --font-display: Georgia, "Iowan Old Style", "Times New Roman", Times, serif;
-        --font-body: "Helvetica Neue", Helvetica, Arial, system-ui, sans-serif;
-      }
-      @media (prefers-color-scheme: dark) {
-        :root {
-          --bg: #17161a;
-          --fg: #ececee;
-          --muted: #9a95a3;
-          --border: #2b2930;
-          --border-strong: #3a3742;
-          --accent: #ff6b6f;
-        }
+        --hairline: #e6e2d9;
+        --accent: #c8102e;
+        --maxw: 660px;
+        --serif: Georgia, 'Iowan Old Style', 'Times New Roman', Times, serif;
+        --sans: 'Helvetica Neue', Helvetica, Arial, sans-serif;
       }
       * { box-sizing: border-box; }
-      html { color-scheme: light dark; }
+      html, body { margin: 0; padding: 0; }
+      html { color-scheme: light; }
       body {
-        margin: 0;
-        background: var(--bg);
-        color: var(--fg);
-        font-family: var(--font-body);
+        background: var(--paper);
+        color: var(--ink);
+        font-family: var(--sans);
         font-size: 15px;
-        line-height: 1.6;
+        line-height: 1.5;
         -webkit-font-smoothing: antialiased;
       }
-      .wrap { max-width: 660px; margin: 0 auto; padding: 1.5rem 1.25rem 4rem; }
-      a { color: var(--accent); }
-      h1, h2, h3 { font-family: var(--font-display); font-weight: 700; letter-spacing: -0.3px; }
+      a { color: inherit; text-decoration: none; }
+      .container { max-width: 660px; margin: 0 auto; padding: 0 20px; }
 
-      .site-head {
-        text-align: center;
-        padding: 1.2rem 0 0;
-      }
-      .site-head .brand { color: inherit; text-decoration: none; }
-      .site-head h1 {
-        font-family: var(--font-display);
+      /* Masthead */
+      .masthead { text-align: center; padding: 46px 0 0; }
+      .masthead .brand {
+        display: inline-block;
+        font-family: var(--serif);
+        font-size: 40px;
         font-weight: 700;
-        font-size: 2.5rem;
+        letter-spacing: -0.02em;
         line-height: 1;
-        margin: 0;
       }
-      .site-head h1 .dot { color: var(--accent); }
-      .site-head .tagline {
-        display: block;
-        margin-top: .55rem;
-        font-size: .72rem;
+      .brand-dot { color: var(--accent); }
+      .tagline {
+        margin: 10px 0 0;
+        font-size: 11px;
         text-transform: uppercase;
-        letter-spacing: .16em;
+        letter-spacing: 0.22em;
         color: var(--muted);
       }
-      /* Cautare */
-      .search {
-        display: flex;
-        gap: .5rem;
-        max-width: 520px;
-        margin: 1.1rem auto 0;
+      .nav { margin-top: 26px; border-top: 1px solid var(--hairline); border-bottom: 2px solid var(--ink); }
+      .nav-in {
+        display: flex; justify-content: center; flex-wrap: wrap;
+        gap: 4px 22px; padding-top: 12px; padding-bottom: 14px;
       }
-      .search input {
-        flex: 1;
-        font: inherit;
-        font-size: .95rem;
-        padding: .6rem .9rem;
-        color: var(--fg);
-        background: var(--bg);
-        border: 1px solid var(--border-strong);
-        border-radius: 999px;
-        outline: none;
+      .nav a {
+        font-size: 12px; font-weight: 700; text-transform: uppercase;
+        letter-spacing: 0.12em; color: var(--muted); transition: color 0.15s;
       }
-      .search input::placeholder { color: var(--muted); }
-      .search input:focus { border-color: var(--accent); }
-      .search button {
-        font: inherit;
-        font-weight: 600;
-        font-size: .9rem;
-        padding: .6rem 1.3rem;
-        color: #fff;
-        background: #1a1622;
-        border: none;
-        border-radius: 999px;
-        cursor: pointer;
-      }
-      @media (prefers-color-scheme: dark) {
-        .search button { background: #e9e7ec; color: #17161a; }
-      }
-      /* Navigare categorii */
-      .mainnav {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: .3rem 1.3rem;
-        margin-top: 1.1rem;
-        padding: .9rem 0;
-        border-top: 1px solid var(--border);
-        border-bottom: 2px solid var(--fg);
-      }
-      .mainnav a {
-        font-size: .74rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: .09em;
-        color: var(--muted);
-        text-decoration: none;
-      }
-      .mainnav a:hover { color: var(--fg); }
-      .mainnav a.active { color: var(--accent); }
+      .nav a:hover { color: var(--ink); }
+      .nav a.active { color: var(--accent); }
 
-      .badge {
-        display: inline-block;
-        font-size: .82rem;
-        font-weight: 600;
-        color: var(--accent);
-        white-space: nowrap;
+      /* Stripă de actualizare */
+      .updated {
+        text-align: center; font-size: 11px; text-transform: uppercase;
+        letter-spacing: 0.14em; color: var(--muted); padding: 22px 0 4px;
       }
-      .cat {
-        display: inline-block;
-        font-size: .72rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: .1em;
-        color: var(--accent);
+      .updated::before {
+        content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+        background: #22a06b; margin-right: 9px; vertical-align: 1px;
+        animation: pulse 2.4s ease-in-out infinite;
       }
-      footer.site-foot {
-        margin-top: 3rem;
-        padding-top: 1rem;
-        border-top: 1px solid var(--border);
-        color: var(--muted);
-        font-size: .8rem;
-        text-align: center;
+      @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+      /* Șirea principală (lead) */
+      .lead { display: block; padding: 30px 0; border-bottom: 1px solid var(--hairline); }
+      .kicker {
+        font-size: 11px; font-weight: 700; text-transform: uppercase;
+        letter-spacing: 0.18em; color: var(--accent);
+      }
+      .lead-title {
+        margin: 10px 0 12px; font-family: var(--serif); font-size: 31px;
+        line-height: 1.16; font-weight: 700; letter-spacing: -0.01em;
+      }
+      .lead:hover .lead-title { text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
+      .lead-sum { margin: 0 0 14px; color: var(--muted); font-size: 15px; line-height: 1.55; }
+
+      /* Rânduri de articole */
+      .art { display: block; padding: 20px 0; border-bottom: 1px solid var(--hairline); }
+      .art-title {
+        margin: 0; font-family: var(--serif); font-size: 19.5px;
+        line-height: 1.26; font-weight: 700; letter-spacing: -0.005em;
+      }
+      .art:hover .art-title { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+      .art-sum {
+        margin: 7px 0 0; color: var(--muted); font-size: 13.5px; line-height: 1.5;
+        display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+      }
+      .art-meta {
+        display: flex; justify-content: space-between; align-items: baseline;
+        gap: 14px; margin-top: 8px; font-size: 12px; color: var(--muted);
+      }
+      .art-left { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+      .theme {
+        font-size: 10.5px; font-weight: 700; text-transform: uppercase;
+        letter-spacing: 0.14em; color: var(--ink); white-space: nowrap;
+      }
+      .art-src { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .surse-n { color: var(--accent); white-space: nowrap; }
+
+      /* Căutare */
+      .cauta { display: flex; justify-content: center; gap: 8px; margin: 16px auto 0; max-width: 420px; }
+      .cauta input {
+        flex: 1; min-width: 0; font: inherit; font-size: 14px; padding: 8px 14px;
+        border: 1px solid var(--hairline); border-radius: 999px; background: #fff;
+        color: var(--ink); outline: none;
+      }
+      .cauta input:focus { border-color: var(--ink); }
+      .cauta button {
+        font: inherit; font-size: 13px; font-weight: 700; padding: 8px 18px;
+        border: 1px solid var(--ink); border-radius: 999px; background: var(--ink);
+        color: #fff; cursor: pointer;
+      }
+      .cauta button:hover { background: #2a2440; }
+      mark { background: #ffe89a; color: inherit; padding: 0 2px; }
+
+      /* Secțiuni */
+      .section { margin-top: 44px; }
+      .sec-head {
+        display: flex; align-items: baseline; justify-content: space-between;
+        border-top: 2px solid var(--ink); padding-top: 10px; margin-bottom: 4px;
+      }
+      .sec-head h2 {
+        margin: 0; font-family: var(--sans); font-size: 14px; font-weight: 700;
+        text-transform: uppercase; letter-spacing: 0.18em;
+      }
+
+      /* Antet pagină de secțiune */
+      .page-head { margin-top: 40px; border-top: 2px solid var(--ink); padding-top: 14px; }
+      .page-head h1 {
+        margin: 0; font-family: var(--serif); font-size: 30px; font-weight: 700;
+        letter-spacing: -0.01em; line-height: 1.1;
+      }
+      .page-head p { margin: 8px 0 0; color: var(--muted); font-size: 14px; }
+      .page-head .kicker { display: block; margin-bottom: 10px; }
+      .page-head .clear { color: var(--accent); font-weight: 700; }
+
+      /* Pagina de citire */
+      .reader { padding-top: 34px; }
+      .reader-back {
+        display: inline-block; font-size: 11px; font-weight: 700; text-transform: uppercase;
+        letter-spacing: 0.16em; color: var(--muted); margin-bottom: 26px;
+      }
+      .reader-back:hover { color: var(--ink); }
+      .reader .kicker { display: block; text-align: center; }
+      .reader-title {
+        margin: 14px auto 18px; font-family: var(--serif); font-size: 30px;
+        line-height: 1.18; font-weight: 700; letter-spacing: -0.01em; text-align: center; max-width: 560px;
+      }
+      .reader-meta {
+        display: flex; justify-content: space-between; align-items: baseline;
+        gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--muted);
+        border-top: 1px solid var(--hairline); border-bottom: 1px solid var(--hairline);
+        padding: 10px 0; margin-bottom: 30px;
+      }
+      .ai-tag {
+        font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em;
+        color: var(--accent); border: 1px solid var(--accent); border-radius: 999px;
+        padding: 1px 8px; white-space: nowrap;
+      }
+      .reader-body p { margin: 0 0 18px; font-family: var(--serif); font-size: 17px; line-height: 1.7; }
+      .reader-legal { margin: 26px 0 0; font-size: 11.5px; color: var(--muted); opacity: 0.75; text-align: center; }
+
+      /* Sursele subiectului */
+      .surse { margin-top: 44px; }
+      .sursa {
+        display: flex; justify-content: space-between; align-items: baseline;
+        gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--hairline);
+      }
+      .sursa-title { font-size: 14.5px; line-height: 1.4; color: var(--muted); transition: color 0.15s; }
+      .sursa:hover .sursa-title { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+      .sursa-meta { font-size: 12px; color: var(--muted); white-space: nowrap; }
+
+      /* Gol */
+      .gol { padding: 34px 0; color: var(--muted); font-size: 14px; border-bottom: 1px solid var(--hairline); }
+
+      /* Footer */
+      .footer { margin-top: 64px; border-top: 2px solid var(--ink); padding: 26px 0 60px; }
+      .footer-brand { font-family: var(--serif); font-weight: 700; font-size: 17px; margin: 0 0 10px; text-align: center; }
+      .footer-text { margin: 0 auto 14px; font-size: 12.5px; line-height: 1.65; color: var(--muted); text-align: center; max-width: 480px; }
+      .footer-sources { font-size: 11px; color: var(--muted); text-align: center; letter-spacing: 0.04em; line-height: 1.8; opacity: 0.75; }
+
+      /* Responsiv */
+      @media (max-width: 620px) {
+        .masthead { padding-top: 34px; }
+        .masthead .brand { font-size: 32px; }
+        .lead-title { font-size: 25px; }
+        .page-head h1 { font-size: 26px; }
+        .nav-in { gap: 2px 16px; }
       }
     </style>
   </head>
   <body>
-    <div class="wrap">
-      <header class="site-head">
-        <a class="brand" href="/"><h1>Știri<span class="dot">.</span></h1></a>
-        <span class="tagline">Din presa Republicii Moldova · actualizat automat</span>
-        <form class="search" action="/" method="get" role="search">
+    <div class="container">
+      <header class="masthead">
+        <a class="brand" href="/">Știri<span class="brand-dot">.</span></a>
+        <p class="tagline">Din presa Republicii Moldova</p>
+        <form class="cauta" action="/" method="get" role="search">
           <input type="search" name="q" value={curQ} placeholder="caută în știri…" aria-label="Caută în știri" />
           <button type="submit">caută</button>
         </form>
-        <nav class="mainnav" aria-label="Categorii">
+        <nav class="nav"><div class="nav-in">
           <a href="/" class={homeActive ? "active" : ""}>Acasă</a>
           {CATS.map((c) => (
             <a href={`/?cat=${encodeURIComponent(c)}`} class={c === curCat ? "active" : ""}>{c}</a>
           ))}
-        </nav>
+        </div></nav>
       </header>
       <main>
         <slot />
       </main>
-      <footer class="site-foot">
-        Rezumate generate automat din mai multe surse. Verificați întotdeauna sursele originale.
+      <footer class="footer">
+        <p class="footer-brand">Știri.</p>
+        <p class="footer-text">Rezumate generate automat din mai multe surse. Verificați întotdeauna sursele originale.</p>
+        <p class="footer-sources">Ziarul de Gardă · TV8 · NewsMaker · Unimedia · Deschide.md · IPN · Moldova1</p>
       </footer>
     </div>
   </body>

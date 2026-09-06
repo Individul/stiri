@@ -9,7 +9,8 @@ export type Job =
   | { type: "fetch"; articleId: number }
   | { type: "embed"; articleId: number }
   | { type: "cluster"; articleId: number; values?: number[] }
-  | { type: "summarize"; clusterId: number };
+  | { type: "summarize"; clusterId: number }
+  | { type: "merge"; clusterId: number };
 
 export interface Source {
   id: number;

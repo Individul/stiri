@@ -16,3 +16,18 @@ describe("decideCluster", () => {
     expect(decideCluster(null, t)).toBe("new");
   });
 });
+
+import { alegePastrat } from "../src/lib/db";
+
+describe("alegePastrat", () => {
+  it("pastreaza mereu clusterul mai vechi (id mai mic)", () => {
+    expect(alegePastrat(17, 40)).toEqual({ pastrat: 17, absorbit: 40 });
+  });
+  it("directia nu depinde de ordinea argumentelor", () => {
+    expect(alegePastrat(40, 17)).toEqual(alegePastrat(17, 40));
+  });
+  it("doua joburi concurente nu se pot absorbi reciproc", () => {
+    const a = alegePastrat(5, 9), b = alegePastrat(9, 5);
+    expect(a.pastrat).toBe(b.pastrat);
+  });
+});

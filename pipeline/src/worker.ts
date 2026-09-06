@@ -15,7 +15,10 @@ export default {
     return new Response("stiri-pipeline: ruleaza pe cron (*/10). Fara pagina web.\n", { status: 200 });
   },
   async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
-    ctx.waitUntil(discover(env));
+    ctx.waitUntil((async () => {
+      await discover(env);
+      await sweepMerge(env);
+    })());
   },
   async queue(batch: MessageBatch<Job>, env: Env) {
     for (const msg of batch.messages) {
@@ -70,7 +73,15 @@ export async function handleJob(job: Job, env: Env) {
     case "embed": return doEmbed(job.articleId, env);
     case "cluster": return doCluster(job.articleId, env, job.values);
     case "summarize": return doSummarize(job.clusterId, env);
+    case "merge": return doMerge(job.clusterId, env);
   }
+}
+
+// Pune la coada re-verificarea clusterelor care nu au trecut inca prin ea. Acopera
+// atat clusterele noi, cat si cele ramase din rulari anterioare.
+export async function sweepMerge(env: Env) {
+  const ids = await db.clustersNeedingMergeCheck(env.DB, 60);
+  for (const clusterId of ids) await env.QUEUE.send({ type: "merge", clusterId });
 }
 
 export async function doFetch(articleId: number, env: Env) {
@@ -147,9 +158,67 @@ export async function doCluster(articleId: number, env: Env, values?: number[]) 
     await meter.flush(env.DB);
     if (same) clusterId = await clusterIdOfVector(env, candidate.id);
   }
+  const clusterNou = clusterId === null;
   if (clusterId === null) clusterId = await db.createCluster(env.DB);
   await db.attachToCluster(env.DB, articleId, clusterId);
   await env.QUEUE.send({ type: "summarize", clusterId });
+  if (clusterNou) {
+    // Cozile proceseaza in paralel, iar Vectorize e eventual-consistent: doua articole
+    // despre acelasi eveniment pot ajunge aici simultan fara sa se vada reciproc.
+    // Reverificam peste 2 minute, cand indexul e la zi.
+    await env.QUEUE.send({ type: "merge", clusterId }, { delaySeconds: 120 });
+  }
+}
+
+// Cauta un cluster-frate (acelasi eveniment, grupat separat din cauza intarzierii de
+// indexare) si le uneste. Aceleasi praguri ca la grupare, deci acelasi risc de eroare.
+export async function doMerge(clusterId: number, env: Env) {
+  const vids = await db.clusterVectorIds(env.DB, clusterId);
+  if (vids.length === 0) { await db.markMergeChecked(env.DB, clusterId); return; }
+
+  const self = await env.VECTORIZE.getByIds([vids[0]]);
+  const stored = self[0]?.values;
+  if (!stored) throw new Error(`vector ${vids[0]} inca neindexat; reincercam`);
+
+  const matches = await env.VECTORIZE.query(Array.from(stored as ArrayLike<number>), { topK: 10 });
+  let tinta: number | null = null;
+  let scor = 0;
+  for (const m of matches.matches) {
+    if (vids.includes(m.id)) continue;
+    const cid = await clusterIdOfVector(env, m.id);
+    if (cid === null || cid === clusterId) continue;
+    if (m.score > scor) { scor = m.score; tinta = cid; }
+  }
+
+  const decizie = decideCluster(tinta === null ? null : scor);
+  let uneste = decizie === "attach";
+  if (decizie === "confirm" && tinta !== null) {
+    const a = await articleOfCluster(env, clusterId);
+    const b = await articleOfCluster(env, tinta);
+    if (a && b) {
+      const meter = new Meter();
+      uneste = await confirmSameEvent(
+        { title: a.title, excerpt: a.text.slice(0, 600) },
+        { title: b.title, excerpt: b.text.slice(0, 600) },
+        meter.wrap("confirm", env.AI)
+      );
+      await meter.flush(env.DB);
+    }
+  }
+
+  if (uneste && tinta !== null) {
+    const { pastrat, absorbit } = db.alegePastrat(clusterId, tinta);
+    await db.mergeClusters(env.DB, absorbit, pastrat);
+    await env.QUEUE.send({ type: "summarize", clusterId: pastrat });
+    return;
+  }
+  await db.markMergeChecked(env.DB, clusterId);
+}
+
+async function articleOfCluster(env: Env, clusterId: number) {
+  return env.DB.prepare(
+    "SELECT title, COALESCE(extracted_text, excerpt, '') AS text FROM articles WHERE cluster_id = ? LIMIT 1"
+  ).bind(clusterId).first<{ title: string; text: string }>();
 }
 
 async function clusterIdOfVector(env: Env, vectorId: string): Promise<number | null> {

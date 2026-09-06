@@ -98,6 +98,47 @@ export async function clusterSummaryState(
   return { hasSummary: row.has_summary === 1, sourceCount: row.source_count };
 }
 
+// --- Reunificarea clusterelor create simultan (vezi migratia 0004) ---
+
+// Pastram mereu clusterul mai vechi (id mai mic), ca doua joburi concurente sa nu
+// incerce sa se absoarba reciproc.
+export function alegePastrat(a: number, b: number): { pastrat: number; absorbit: number } {
+  return a <= b ? { pastrat: a, absorbit: b } : { pastrat: b, absorbit: a };
+}
+
+export async function clusterVectorIds(db: D1Database, clusterId: number): Promise<string[]> {
+  const { results } = await db.prepare(
+    "SELECT vector_id FROM articles WHERE cluster_id = ? AND vector_id IS NOT NULL"
+  ).bind(clusterId).all<{ vector_id: string }>();
+  return results.map((r) => r.vector_id);
+}
+
+// Muta articolele in clusterul pastrat si sterge clusterul golit, intr-o singura
+// tranzactie. Reseteaza si marcajul de verificare al celui pastrat: dupa ce a crescut,
+// merita re-verificat, poate mai absoarbe un frate.
+export async function mergeClusters(db: D1Database, absorbit: number, pastrat: number): Promise<void> {
+  await db.batch([
+    db.prepare("UPDATE articles SET cluster_id = ? WHERE cluster_id = ?").bind(pastrat, absorbit),
+    db.prepare("DELETE FROM clusters WHERE id = ?").bind(absorbit),
+    db.prepare("UPDATE clusters SET merge_checked_at = NULL WHERE id = ?").bind(pastrat),
+  ]);
+}
+
+export async function markMergeChecked(db: D1Database, id: number): Promise<void> {
+  await db.prepare("UPDATE clusters SET merge_checked_at = datetime('now') WHERE id = ?").bind(id).run();
+}
+
+// Clustere care nu au fost inca re-verificate; le lasam sa "se aseze" cateva minute,
+// ca indexul Vectorize sa fie la zi.
+export async function clustersNeedingMergeCheck(db: D1Database, limit = 60): Promise<number[]> {
+  const { results } = await db.prepare(
+    `SELECT id FROM clusters
+     WHERE merge_checked_at IS NULL AND first_seen_at <= datetime('now', '-2 minutes')
+     ORDER BY id LIMIT ?`
+  ).bind(limit).all<{ id: number }>();
+  return results.map((r) => r.id);
+}
+
 export async function updateClusterSummary(
   db: D1Database, id: number, s: { title: string; category: string; summary: string; count: number; score: number }
 ) {

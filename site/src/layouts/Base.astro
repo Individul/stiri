@@ -258,9 +258,20 @@ const homeActive = onHome && !curCat && !curQ;
         background: var(--ink); border-color: var(--ink); color: #fff;
       }
 
+      /* Pe ecrane late, coloana de stiri se aseaza EXACT ca pagina de citire: o
+         coloana goala, egala cu panoul, echilibreaza dreapta, deci fluxul ramane
+         centrat in fereastra. Nevoie de 620 + 2×(48+300) + 40 = 1356px. */
+      @media (min-width: 1360px) {
+        .container-larg { max-width: 1356px; }
+        .home-grid { grid-template-columns: 300px minmax(0, 620px) 300px; }
+        .flux { grid-column: 2; }
+        .panou-popular { grid-column: 3; }
+      }
+
       @media (max-width: 1000px) {
         .home-grid { grid-template-columns: 1fr; gap: 0; }
         .panou-popular { position: static; margin-top: 44px; }
+        .flux, .panou-popular { grid-column: auto; }
       }
 
       /* Responsiv */

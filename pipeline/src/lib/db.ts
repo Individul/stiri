@@ -12,6 +12,19 @@ export async function articleExists(db: D1Database, url: string): Promise<boolea
   return row !== null;
 }
 
+// Titlurile recente ale unei surse — ca sa prindem acelasi articol republicat cu
+// titlu editat (slug schimbat => URL diferit, dar e acelasi articol).
+export async function recentTitlesOfSource(
+  db: D1Database, sourceId: number, limit = 200
+): Promise<string[]> {
+  const { results } = await db.prepare(
+    `SELECT title FROM articles
+     WHERE source_id = ? AND created_at >= datetime('now', '-2 days')
+     ORDER BY id DESC LIMIT ?`
+  ).bind(sourceId, limit).all<{ title: string }>();
+  return results.map((r) => r.title);
+}
+
 export async function insertArticle(
   db: D1Database, a: { sourceId: number; url: string; title: string; author: string | null;
     publishedAt: string | null; excerpt: string | null; }

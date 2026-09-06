@@ -4,6 +4,7 @@ import { extractText } from "./lib/extract";
 import { embed } from "./lib/embeddings";
 import { confirmSameEvent, summarizeCluster } from "./lib/summarize";
 import { decideCluster } from "./lib/cluster";
+import { normalizeUrl, titlesNearlyIdentical } from "./lib/urls";
 import { Meter } from "./lib/meter";
 import * as db from "./lib/db";
 
@@ -36,12 +37,17 @@ export async function discover(env: Env) {
       const res = await fetch(src.feed_url, { headers: { "user-agent": "StiriMD/1.0" } });
       if (!res.ok) continue;
       const items = parseFeed(await res.text());
+      // Titluri recente ale sursei: prind acelasi articol republicat cu titlu editat.
+      const titluriRecente = await db.recentTitlesOfSource(env.DB, src.id);
       for (const item of items) {
-        if (await db.articleExists(env.DB, item.url)) continue;
+        const url = normalizeUrl(item.url);
+        if (await db.articleExists(env.DB, url)) continue;
+        if (titluriRecente.some((t) => titlesNearlyIdentical(t, item.title))) continue;
         const id = await db.insertArticle(env.DB, {
-          sourceId: src.id, url: item.url, title: item.title,
+          sourceId: src.id, url, title: item.title,
           author: item.author, publishedAt: item.publishedAt, excerpt: item.excerpt,
         });
+        titluriRecente.push(item.title);
         await env.QUEUE.send({ type: "fetch", articleId: id });
       }
     } catch (e) {

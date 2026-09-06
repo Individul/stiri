@@ -82,10 +82,20 @@ export interface ClusterSource {
 }
 
 export async function clusterSources(db: D1Database, id: number): Promise<ClusterSource[]> {
+  // O singura intrare per sursa: cel mai recent articol al acelei surse din grup.
+  // (O redactie poate republica acelasi articol cu titlu/slug editat.)
   const { results } = await db.prepare(
     `SELECT s.name AS source, a.title AS title, a.url AS url, a.published_at AS published_at
-     FROM articles a JOIN sources s ON s.id = a.source_id
-     WHERE a.cluster_id = ? ORDER BY a.published_at`
+     FROM articles a
+     JOIN sources s ON s.id = a.source_id
+     WHERE a.cluster_id = ?
+       AND a.id = (
+         SELECT a2.id FROM articles a2
+         WHERE a2.cluster_id = a.cluster_id AND a2.source_id = a.source_id
+         ORDER BY COALESCE(a2.published_at, '') DESC, a2.id DESC
+         LIMIT 1
+       )
+     ORDER BY a.published_at`
   ).bind(id).all<ClusterSource>();
   return results;
 }

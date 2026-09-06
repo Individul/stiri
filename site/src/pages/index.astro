@@ -33,12 +33,12 @@ const cats = await distinctCategories(DB);
       <ul class="feed">
         {cards.map((c) => (
           <li class="card">
+            <span class="cat">{c.category}</span>
             <a class="card-title" href={`/s/${c.id}`}>
               {c.canonical_title}
             </a>
             <p class="lead">{c.lead}…</p>
             <div class="meta">
-              <span class="cat">{c.category}</span>
               <span class="badge">{formatSourceCount(c.source_count)}</span>
             </div>
           </li>
@@ -51,67 +51,46 @@ const cats = await distinctCategories(DB);
     .cats {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.4rem;
-      margin-bottom: 1.5rem;
-    }
-    .cats a {
-      font-size: 0.82rem;
-      text-decoration: none;
-      color: var(--muted);
-      border: 1px solid var(--border);
-      padding: 0.25rem 0.7rem;
-      border-radius: 999px;
-    }
-    .cats a:hover {
-      color: var(--fg);
-    }
-    .cats a.active {
-      color: #fff;
-      background: var(--accent);
-      border-color: var(--accent);
-    }
-    @media (prefers-color-scheme: dark) {
-      .cats a.active {
-        color: #0f1115;
-      }
-    }
-    .feed {
-      list-style: none;
-      margin: 0;
-      padding: 0;
-    }
-    .card {
-      padding: 1.1rem 0;
+      justify-content: center;
+      gap: 0.35rem 1.1rem;
+      padding-bottom: 1.25rem;
+      margin-bottom: 0.5rem;
       border-bottom: 1px solid var(--border);
     }
-    .card:first-child {
-      padding-top: 0;
+    .cats a {
+      font-size: 0.74rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      text-decoration: none;
+      color: var(--muted);
     }
+    .cats a:hover { color: var(--fg); }
+    .cats a.active { color: var(--accent); }
+
+    .feed { list-style: none; margin: 0; padding: 0; }
+    .card {
+      padding: 1.25rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .cat + .card-title { margin-top: 0.25rem; }
     .card-title {
       display: inline-block;
       font-family: var(--font-display);
-      font-size: 1.4rem;
+      font-size: 1.45rem;
       font-weight: 700;
-      line-height: 1.25;
+      line-height: 1.22;
       text-decoration: none;
       color: var(--fg);
     }
-    .card-title:hover {
-      color: var(--accent);
-    }
+    .card-title:hover { color: var(--accent); }
     .lead {
-      margin: 0.4rem 0 0.6rem;
-      color: var(--fg);
-      opacity: 0.85;
-      font-size: 1rem;
-    }
-    .meta {
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
-    }
-    .empty {
+      margin: 0.45rem 0 0.7rem;
       color: var(--muted);
+      font-size: 0.96rem;
+      line-height: 1.6;
     }
+    .meta { display: flex; align-items: center; gap: 0.6rem; }
+    .empty { color: var(--muted); }
   </style>
 </Base>

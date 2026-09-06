@@ -37,4 +37,14 @@ describe("summarizeCluster", () => {
     const ai = { run: async () => ({ response: JSON.stringify({ category: "Politică" }) }) };
     await expect(summarizeCluster([{ source: "A", title: "t", text: "x" }], ai)).rejects.toThrow();
   });
+  it("accepta response obiect deja parsat (format Workers AI real)", async () => {
+    const ai = { run: async () => ({ response: { ...payload } }) };
+    const r = await summarizeCluster([{ source: "A", title: "t", text: "x" }], ai);
+    expect(r).toEqual(payload);
+  });
+  it("accepta choices[].message.content (format OpenAI)", async () => {
+    const ai = { run: async () => ({ choices: [{ message: { content: JSON.stringify(payload) } }] }) };
+    const r = await summarizeCluster([{ source: "A", title: "t", text: "x" }], ai);
+    expect(r).toEqual(payload);
+  });
 });

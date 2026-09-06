@@ -23,4 +23,9 @@ describe("confirmSameEvent", () => {
     const r = await confirmSameEvent({ title: "x", excerpt: "" }, { title: "y", excerpt: "" }, ai);
     expect(r).toBe(false);
   });
+  it("citeste raspunsul si din choices[].message.content", async () => {
+    const ai = { run: async () => ({ choices: [{ message: { content: "DA" } }] }) };
+    const r = await confirmSameEvent({ title: "x", excerpt: "" }, { title: "y", excerpt: "" }, ai);
+    expect(r).toBe(true);
+  });
 });

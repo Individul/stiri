@@ -2,6 +2,30 @@ import { MODELS, type AiLike } from "./ai";
 
 export interface ArticleLite { title: string; excerpt: string; }
 
+// Workers AI (format OpenAI) poate intoarce raspunsul ca:
+//  - res.response string,
+//  - res.response obiect deja parsat (cand modelul produce JSON),
+//  - res.choices[0].message.content string.
+// Intoarce partea de text bruta (string), sau null daca e obiect parsat.
+function aiText(res: any): string | null {
+  const r = res?.response;
+  if (typeof r === "string") return r;
+  const c = res?.choices?.[0]?.message?.content;
+  if (typeof c === "string") return c;
+  return null;
+}
+
+// Incearca sa obtina obiectul JSON al rezumatului din oricare forma de raspuns.
+function aiJson(res: any): any | null {
+  const r = res?.response;
+  if (r && typeof r === "object") return r; // deja parsat de Workers AI
+  const txt = aiText(res);
+  if (!txt) return null;
+  const start = txt.indexOf("{"), end = txt.lastIndexOf("}");
+  if (start === -1 || end <= start) return null;
+  try { return JSON.parse(txt.slice(start, end + 1)); } catch { return null; }
+}
+
 export async function confirmSameEvent(
   a: ArticleLite, b: ArticleLite, ai: AiLike
 ): Promise<boolean> {
@@ -14,7 +38,7 @@ export async function confirmSameEvent(
     max_tokens: 5,
     temperature: 0,
   });
-  return /^DA\b/.test(String(res?.response ?? "").trim().toUpperCase());
+  return /^DA\b/.test((aiText(res) ?? "").trim().toUpperCase());
 }
 
 export interface ClusterMember { source: string; title: string; text: string; }
@@ -39,10 +63,8 @@ export async function summarizeCluster(members: ClusterMember[], ai: AiLike): Pr
     max_tokens: 1500,
     temperature: 0.2,
   });
-  const raw = String(res?.response ?? "");
-  const start = raw.indexOf("{"), end = raw.lastIndexOf("}");
-  if (start === -1 || end <= start) throw new Error("summarize: fara JSON in raspuns");
-  const parsed = JSON.parse(raw.slice(start, end + 1)) as Summary;
+  const parsed = aiJson(res) as Summary | null;
+  if (!parsed) throw new Error("summarize: fara JSON in raspuns");
   if (!parsed.title?.trim() || !parsed.summary?.trim()) {
     throw new Error("summarize: title/summary lipsa");
   }

@@ -33,11 +33,13 @@ export async function topClusters(
 export interface SourceRow {
   id: number; name: string; site_url: string; feed_url: string;
   enabled: number; created_at: string; articole: number;
+  last_check_at: string | null; last_status: string | null; last_ok_at: string | null;
 }
 
 export async function listSources(db: D1Database): Promise<SourceRow[]> {
   const { results } = await db.prepare(
     `SELECT s.id, s.name, s.site_url, s.feed_url, s.enabled, s.created_at,
+            s.last_check_at, s.last_status, s.last_ok_at,
             (SELECT COUNT(*) FROM articles a WHERE a.source_id = s.id) AS articole
      FROM sources s
      ORDER BY s.enabled DESC, s.name`

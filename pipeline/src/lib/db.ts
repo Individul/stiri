@@ -12,6 +12,19 @@ export async function articleExists(db: D1Database, url: string): Promise<boolea
   return row !== null;
 }
 
+// Inregistreaza rezultatul ultimei verificari a feed-ului, ca sa fie vizibil in /admin.
+export async function setSourceStatus(
+  db: D1Database, id: number, status: string, ok: boolean
+): Promise<void> {
+  await db.prepare(
+    `UPDATE sources
+     SET last_check_at = datetime('now'),
+         last_status = ?,
+         last_ok_at = CASE WHEN ? = 1 THEN datetime('now') ELSE last_ok_at END
+     WHERE id = ?`
+  ).bind(status, ok ? 1 : 0, id).run();
+}
+
 // Titlurile recente ale unei surse — ca sa prindem acelasi articol republicat cu
 // titlu editat (slug schimbat => URL diferit, dar e acelasi articol).
 export async function recentTitlesOfSource(

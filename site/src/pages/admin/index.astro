@@ -3,6 +3,7 @@ import { env } from "cloudflare:workers";
 import Base from "../../layouts/Base.astro";
 import { listSources, addSource, setSourceEnabled, type SourceRow } from "../../lib/db";
 import { verificaAccessJwt } from "../../lib/access";
+import { relTime } from "../../lib/format";
 
 const { DB, ACCESS_TEAM_DOMAIN, ACCESS_AUD, ADMIN_TOKEN } = env as unknown as {
   DB: D1Database; ACCESS_TEAM_DOMAIN?: string; ACCESS_AUD?: string; ADMIN_TOKEN?: string;
@@ -131,15 +132,20 @@ const err = Astro.url.searchParams.get("err");
     <section class="section">
       <div class="sec-head"><h2>Sursele existente</h2></div>
       <table class="tabel">
-        <thead><tr><th>Sursă</th><th>Feed</th><th class="r">Articole</th><th class="r">Stare</th></tr></thead>
+        <thead><tr><th>Sursă</th><th>Stare feed</th><th class="r">Articole</th><th class="r">Acțiune</th></tr></thead>
         <tbody>
           {surse.map((s) => (
             <tr class={s.enabled ? "" : "inactiva"}>
               <td>
                 <strong>{s.name}</strong><br />
-                <a href={s.site_url} target="_blank" rel="noopener" class="mic">{s.site_url}</a>
+                <span class="mono mic">{s.feed_url}</span>
               </td>
-              <td class="mono mic">{s.feed_url}</td>
+              <td>
+                {s.last_status
+                  ? <span class={s.last_status.startsWith("ok") ? "stare-ok" : "stare-rau"}>{s.last_status}</span>
+                  : <span class="mic">încă neverificat</span>}
+                {s.last_check_at && <><br /><span class="mic">verificat {relTime(s.last_check_at)}</span></>}
+              </td>
               <td class="r">{s.articole}</td>
               <td class="r">
                 <form method="post">
@@ -173,6 +179,8 @@ const err = Astro.url.searchParams.get("err");
       .tabel tr.inactiva { opacity: 0.5; }
       .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; word-break: break-all; }
       .mic { font-size: 11.5px; color: var(--muted); }
+      .stare-ok { font-size: 12px; color: #17754e; }
+      .stare-rau { font-size: 12px; color: var(--accent); font-weight: 700; }
       .buton-off, .buton-on { font: inherit; font-size: 11.5px; font-weight: 700; padding: 4px 10px;
         border-radius: 999px; cursor: pointer; white-space: nowrap; }
       .buton-off { border: 1px solid var(--hairline); background: transparent; color: var(--muted); }

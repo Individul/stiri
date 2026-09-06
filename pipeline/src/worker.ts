@@ -35,10 +35,15 @@ export async function discover(env: Env) {
   for (const src of sources) {
     try {
       const res = await fetch(feedUrlAntiCache(src.feed_url), { headers: { "user-agent": "StiriMD/1.0" } });
-      if (!res.ok) continue;
+      if (!res.ok) {
+        // Nu mai sarim tacut: starea ajunge in /admin, ca sa se vada de ce sursa e la 0.
+        await db.setSourceStatus(env.DB, src.id, `HTTP ${res.status}`, false);
+        continue;
+      }
       const items = parseFeed(await res.text());
       // Titluri recente ale sursei: prind acelasi articol republicat cu titlu editat.
       const titluriRecente = await db.recentTitlesOfSource(env.DB, src.id);
+      let noi = 0;
       for (const item of items) {
         const url = normalizeUrl(item.url);
         if (await db.articleExists(env.DB, url)) continue;
@@ -48,10 +53,13 @@ export async function discover(env: Env) {
           author: item.author, publishedAt: item.publishedAt, excerpt: item.excerpt,
         });
         titluriRecente.push(item.title);
+        noi++;
         await env.QUEUE.send({ type: "fetch", articleId: id });
       }
+      await db.setSourceStatus(env.DB, src.id, `ok · ${items.length} în feed · ${noi} noi`, true);
     } catch (e) {
       console.error("source failed", src.feed_url, e);
+      await db.setSourceStatus(env.DB, src.id, `eroare: ${String(e).slice(0, 120)}`, false);
     }
   }
 }

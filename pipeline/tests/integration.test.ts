@@ -3,6 +3,7 @@ import { env } from "cloudflare:test";
 // DDL-ul migratiilor, importat ca text brut (Vite/vitest, sufixul ?raw).
 import migration1 from "../migrations/0001_init.sql?raw";
 import migration2 from "../migrations/0002_usage.sql?raw";
+import migration3 from "../migrations/0003_source_health.sql?raw";
 import { doEmbed, doCluster } from "../src/worker";
 import { MODELS } from "../src/lib/ai";
 import type { Env } from "../src/types";
@@ -92,7 +93,7 @@ async function clusterOf(id: number): Promise<number | null> {
 }
 
 beforeAll(async () => {
-  for (const stmt of (migration1 + ";" + migration2).split(";")) {
+  for (const stmt of (migration1 + ";" + migration2 + ";" + migration3).split(";")) {
     const s = stmt.trim();
     if (s) await DB.prepare(s).run();
   }

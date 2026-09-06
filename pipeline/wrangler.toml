@@ -1,0 +1,30 @@
+name = "stiri-pipeline"
+main = "src/worker.ts"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[triggers]
+crons = ["*/10 * * * *"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "stiri"
+database_id = "TODO"
+migrations_dir = "migrations"
+
+[[vectorize]]
+binding = "VECTORIZE"
+index_name = "stiri-articles"
+
+[ai]
+binding = "AI"
+
+[[queues.producers]]
+binding = "QUEUE"
+queue = "stiri-jobs"
+
+[[queues.consumers]]
+queue = "stiri-jobs"
+max_batch_size = 10
+max_retries = 5
+dead_letter_queue = "stiri-dlq"

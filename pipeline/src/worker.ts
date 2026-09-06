@@ -154,11 +154,17 @@ async function articleByVector(env: Env, vectorId: string) {
 export async function doSummarize(clusterId: number, env: Env) {
   const members = await db.clusterMembers(env.DB, clusterId);
   if (members.length === 0) return;
+  // Numar de SURSE distincte (nu de articole) — asta afiseaza „N surse" in UI.
+  const sourceCount = new Set(members.map((m) => m.source)).size;
+
+  // Rescriem rezumatul cu AI doar cand apare o SURSA noua (sau daca nu exista inca
+  // rezumat). Un al doilea articol de la aceeasi sursa nu declanseaza un apel AI.
+  const stare = await db.clusterSummaryState(env.DB, clusterId);
+  if (stare?.hasSummary && stare.sourceCount === sourceCount) return;
+
   const meter = new Meter();
   const summary = await summarizeCluster(members, meter.wrap("summarize", env.AI));
   await meter.flush(env.DB);
-  // Numar de SURSE distincte (nu de articole) — asta afiseaza „N surse" in UI.
-  const sourceCount = new Set(members.map((m) => m.source)).size;
   // Scorul stocat e semnalul durabil (nr. surse); decaderea pe recenta se aplica la
   // citire, in site, folosind last_updated_at (vezi Faza 6). Stocam nr. surselor ca scor.
   await db.updateClusterSummary(env.DB, clusterId, {

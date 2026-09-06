@@ -9,9 +9,18 @@ const category = Astro.url.searchParams.get("cat") ?? undefined;
 const q = (Astro.url.searchParams.get("q") ?? "").trim() || undefined;
 const filtered = Boolean(q || category);
 
-const cards = (await topClusters(DB, category, q))
-  .sort((a, b) => rankScore(b.source_count, b.last_updated_at) - rankScore(a.source_count, a.last_updated_at))
-  .slice(0, 50);
+// topClusters vine deja in ordine cronologica (cele mai recent actualizate intai).
+const toate = await topClusters(DB, category, q);
+
+// Doar prima stire e aleasa dupa popularitate (nr. surse, cu decadere pe recenta).
+// Restul raman in ordine cronologica.
+const leadCandidat = filtered
+  ? null
+  : [...toate].sort(
+      (a, b) => rankScore(b.source_count, b.last_updated_at) - rankScore(a.source_count, a.last_updated_at)
+    )[0] ?? null;
+
+const cards = toate.slice(0, 50);
 
 // Cele mai populare = cele mai multe surse, pe trei ferestre de timp.
 const [pop48, pop7, pop30] = await Promise.all([
@@ -29,8 +38,8 @@ const now = new Date().toLocaleDateString("ro-RO", {
   weekday: "long", day: "numeric", month: "long",
 });
 
-const lead = filtered ? null : cards[0];
-const rest = filtered ? cards : cards.slice(1);
+const lead = leadCandidat;
+const rest = lead ? cards.filter((c) => c.id !== lead.id) : cards;
 ---
 
 <Base title="Știri — din presa Republicii Moldova">

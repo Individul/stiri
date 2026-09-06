@@ -60,6 +60,18 @@ export async function clusterMembers(db: D1Database, clusterId: number) {
   return results;
 }
 
+// Starea rezumatului: exista deja un rezumat si cate surse distincte avea la scrierea lui.
+// Folosita ca sa rescriem cu AI doar cand apare o sursa noua.
+export async function clusterSummaryState(
+  db: D1Database, id: number
+): Promise<{ hasSummary: boolean; sourceCount: number } | null> {
+  const row = await db.prepare(
+    "SELECT (summary_md IS NOT NULL) AS has_summary, source_count FROM clusters WHERE id = ?"
+  ).bind(id).first<{ has_summary: number; source_count: number }>();
+  if (!row) return null;
+  return { hasSummary: row.has_summary === 1, sourceCount: row.source_count };
+}
+
 export async function updateClusterSummary(
   db: D1Database, id: number, s: { title: string; category: string; summary: string; count: number; score: number }
 ) {

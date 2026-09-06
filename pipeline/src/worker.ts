@@ -17,6 +17,23 @@ export default {
         return new Response("discover error:\n" + (e?.stack ?? String(e)) + "\n", { status: 500 });
       }
     }
+    if (url.pathname === "/resummarize") {
+      // Verificam intai ca AI raspunde (un apel rejectat pe cap de free tier nu consuma Neuroni).
+      try {
+        await env.AI.run("@cf/meta/llama-3.1-8b-instruct-fp8-fast", {
+          messages: [{ role: "user", content: "ok" }], max_tokens: 1,
+        });
+      } catch (e: any) {
+        return new Response("AI indisponibil (probabil free tier epuizat / Workers Paid neactivat):\n" +
+          (e?.stack ?? String(e)) + "\n", { status: 503 });
+      }
+      // AI merge: punem la coada rezumatele lipsa.
+      const { results } = await env.DB.prepare(
+        "SELECT id FROM clusters WHERE summary_md IS NULL"
+      ).all<{ id: number }>();
+      for (const c of results) await env.QUEUE.send({ type: "summarize", clusterId: c.id });
+      return new Response(`AI ok. Am pus la coada ${results.length} clustere pentru rezumat.\n`);
+    }
     return new Response("stiri-pipeline: ruleaza pe cron (*/10). Fara pagina web.\n", { status: 200 });
   },
   async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext) {

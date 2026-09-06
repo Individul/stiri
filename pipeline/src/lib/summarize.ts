@@ -49,7 +49,7 @@ const CATEGORIES = ["Politică", "Economie", "Social", "Justiție", "Externe", "
 // Modelul mare costa ~12x mai mult per rezumat, asa ca il folosim doar la stirile
 // relatate de multe redactii, unde sinteza chiar e complexa. Pragul se uita la
 // SURSE DISTINCTE, nu la numarul de articole (o redactie poate publica mai multe).
-export const PRAG_MODEL_MARE = 5;
+export const PRAG_MODEL_MARE = 10;
 
 export async function summarizeCluster(members: ClusterMember[], ai: AiLike): Promise<Summary> {
   const surseDistincte = new Set(members.map((m) => m.source)).size;

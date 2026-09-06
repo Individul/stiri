@@ -18,17 +18,19 @@ describe("summarizeCluster", () => {
   const membri = (surse: string[]) =>
     surse.map((s, i) => ({ source: s, title: `t${i}`, text: "x" }));
 
-  it("5 surse distincte => modelul mare", async () => {
+  const nSurse = (n: number) => membri(Array.from({ length: n }, (_, i) => "sursa" + i));
+
+  it("10 surse distincte => modelul mare", async () => {
     let used = "";
     const ai = { run: async (m: string) => { used = m; return { response: JSON.stringify(payload) }; } };
-    await summarizeCluster(membri(["A", "B", "C", "D", "E"]), ai);
+    await summarizeCluster(nSurse(10), ai);
     expect(used).toBe("@cf/meta/llama-3.3-70b-instruct-fp8-fast");
   });
 
-  it("4 surse => tot modelul mic (pragul e 5)", async () => {
+  it("9 surse => tot modelul mic (pragul e 10)", async () => {
     let used = "";
     const ai = { run: async (m: string) => { used = m; return { response: JSON.stringify(payload) }; } };
-    await summarizeCluster(membri(["A", "B", "C", "D"]), ai);
+    await summarizeCluster(nSurse(9), ai);
     expect(used).toBe("@cf/meta/llama-3.1-8b-instruct-fp8-fast");
   });
 

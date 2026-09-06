@@ -23,7 +23,9 @@ function stripHtml(s: string): string {
 function decode(s: string): string {
   return s
     .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, " ");
+    .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, " ")
+    .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(+n))
+    .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCodePoint(parseInt(n, 16)));
 }
 
 function toIso(raw: string | null): string | null {
@@ -33,8 +35,20 @@ function toIso(raw: string | null): string | null {
 }
 
 function atomLink(xml: string): string | null {
-  const m = xml.match(/<link[^>]*href="([^"]+)"[^>]*\/?>/i);
-  return m ? m[1] : null;
+  const links = xml.match(/<link[^>]*href="[^"]+"[^>]*\/?>/gi) ?? [];
+  const href = (link: string): string | null => {
+    const m = link.match(/href="([^"]+)"/i);
+    return m ? m[1] : null;
+  };
+  const rel = (link: string): string | null => {
+    const m = link.match(/rel="([^"]+)"/i);
+    return m ? m[1].toLowerCase() : null;
+  };
+  const preferred = links.find((l) => {
+    const r = rel(l);
+    return r === "alternate" || r === null;
+  });
+  return href(preferred ?? links[0] ?? "") ;
 }
 
 export function parseFeed(xml: string): FeedItem[] {
@@ -46,10 +60,11 @@ export function parseFeed(xml: string): FeedItem[] {
       const title = tag("title", raw);
       if (!url || !title) return null;
       const desc = tag("description", raw) ?? tag("summary", raw);
+      const rawAuthor = tag("author", raw) ?? tag("dc:creator", raw);
       return {
         url,
         title,
-        author: tag("author", raw) ?? tag("dc:creator", raw),
+        author: rawAuthor ? stripHtml(rawAuthor) || null : null,
         publishedAt: toIso(tag("pubDate", raw) ?? tag("published", raw) ?? tag("updated", raw)),
         excerpt: desc ? stripHtml(desc) : null,
       } as FeedItem;

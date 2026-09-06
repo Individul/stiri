@@ -15,14 +15,29 @@ describe("summarizeCluster", () => {
     await summarizeCluster([{ source: "A", title: "t", text: "x" }], ai);
     expect(used).toBe("@cf/meta/llama-3.1-8b-instruct-fp8-fast");
   });
-  it("mai multe surse => modelul mare", async () => {
+  const membri = (surse: string[]) =>
+    surse.map((s, i) => ({ source: s, title: `t${i}`, text: "x" }));
+
+  it("5 surse distincte => modelul mare", async () => {
     let used = "";
     const ai = { run: async (m: string) => { used = m; return { response: JSON.stringify(payload) }; } };
-    await summarizeCluster([
-      { source: "A", title: "t1", text: "x" },
-      { source: "B", title: "t2", text: "y" },
-    ], ai);
+    await summarizeCluster(membri(["A", "B", "C", "D", "E"]), ai);
     expect(used).toBe("@cf/meta/llama-3.3-70b-instruct-fp8-fast");
+  });
+
+  it("4 surse => tot modelul mic (pragul e 5)", async () => {
+    let used = "";
+    const ai = { run: async (m: string) => { used = m; return { response: JSON.stringify(payload) }; } };
+    await summarizeCluster(membri(["A", "B", "C", "D"]), ai);
+    expect(used).toBe("@cf/meta/llama-3.1-8b-instruct-fp8-fast");
+  });
+
+  it("multe articole de la putine surse => modelul mic", async () => {
+    let used = "";
+    const ai = { run: async (m: string) => { used = m; return { response: JSON.stringify(payload) }; } };
+    // 6 articole, dar doar 2 redactii: nu e sinteza complexa.
+    await summarizeCluster(membri(["A", "A", "A", "B", "B", "B"]), ai);
+    expect(used).toBe("@cf/meta/llama-3.1-8b-instruct-fp8-fast");
   });
   it("categorie invalida => Altele", async () => {
     const ai = { run: async () => ({ response: JSON.stringify({ ...payload, category: "Aiurea" }) }) };

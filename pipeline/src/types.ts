@@ -8,7 +8,7 @@ export interface Env {
 export type Job =
   | { type: "fetch"; articleId: number }
   | { type: "embed"; articleId: number }
-  | { type: "cluster"; articleId: number }
+  | { type: "cluster"; articleId: number; values?: number[] }
   | { type: "summarize"; clusterId: number };
 
 export interface Source {

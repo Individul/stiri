@@ -7,6 +7,18 @@ import { decideCluster } from "./lib/cluster";
 import * as db from "./lib/db";
 
 export default {
+  async fetch(req: Request, env: Env): Promise<Response> {
+    const url = new URL(req.url);
+    if (url.pathname === "/run") {
+      try {
+        await discover(env);
+        return new Response("discover ok\n");
+      } catch (e: any) {
+        return new Response("discover error:\n" + (e?.stack ?? String(e)) + "\n", { status: 500 });
+      }
+    }
+    return new Response("stiri-pipeline: ruleaza pe cron (*/10). Fara pagina web.\n", { status: 200 });
+  },
   async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
     ctx.waitUntil(discover(env));
   },
@@ -48,7 +60,7 @@ export async function handleJob(job: Job, env: Env) {
   switch (job.type) {
     case "fetch": return doFetch(job.articleId, env);
     case "embed": return doEmbed(job.articleId, env);
-    case "cluster": return doCluster(job.articleId, env);
+    case "cluster": return doCluster(job.articleId, env, job.values);
     case "summarize": return doSummarize(job.clusterId, env);
   }
 }
@@ -87,18 +99,25 @@ export async function doEmbed(articleId: number, env: Env) {
   await env.VECTORIZE.upsert([{ id: vectorId, values: vector,
     metadata: { articleId, publishedAt: isNaN(publishedAt) ? Date.now() : publishedAt } }]);
   await db.setVector(env.DB, articleId, vectorId);
-  await env.QUEUE.send({ type: "cluster", articleId });
+  // Trecem vectorul mai departe: Vectorize e eventual-consistent, deci getByIds imediat dupa
+  // upsert poate intoarce gol. Cu vectorul in mesaj, doCluster nu depinde de indexare.
+  await env.QUEUE.send({ type: "cluster", articleId, values: vector });
 }
 
-export async function doCluster(articleId: number, env: Env) {
+export async function doCluster(articleId: number, env: Env, values?: number[]) {
   const row = await env.DB.prepare(
     `SELECT a.title, COALESCE(a.extracted_text, a.excerpt, '') AS text, a.vector_id
      FROM articles a WHERE a.id = ?`
   ).bind(articleId).first<{ title: string; text: string; vector_id: string }>();
   if (!row?.vector_id) return;
-  const self = await env.VECTORIZE.getByIds([row.vector_id]);
-  const values = self[0]?.values;
-  if (!values) return;
+  // Fallback pentru joburi vechi fara vector in mesaj: citim din index; daca nu e inca
+  // indexat, aruncam ca sa reincercam (nu iesim tacut, altfel articolul ramane blocat).
+  if (!values) {
+    const self = await env.VECTORIZE.getByIds([row.vector_id]);
+    const stored = self[0]?.values;
+    if (!stored) throw new Error(`vector ${row.vector_id} inca neindexat; reincercam`);
+    values = Array.from(stored as ArrayLike<number>);
+  }
 
   const matches = await env.VECTORIZE.query(values, { topK: 5, returnMetadata: true });
   const candidate = matches.matches.find((m) => m.id !== row.vector_id) ?? null;

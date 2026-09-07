@@ -130,8 +130,12 @@ const stepLabel: Record<string, string> = {
   <p class="note">
     Toți cei trei pași sunt măsurați acum, inclusiv embeddings-urile
     (<code>bge-m3</code> raportează Neuronii în <code>meta</code>, nu în <code>usage</code> ca
-    modelele de text — până la 7 septembrie 2026 apăreau cu 0 aici). Cifra oficială de
-    facturare o vezi în Cloudflare → AI → Workers AI și în Billing.
+    modelele de text — până la 7 septembrie 2026 apăreau cu 0 aici). Rândurile marcate
+    <strong>(estimat)</strong> acoperă embeddings-urile din 6–7 septembrie, dinainte de
+    corectare: sunt calculate din lungimea reală a textelor trimise, la 1.075 Neuroni /
+    milion de tokeni și 3,93 caractere/token (raport măsurat pe 40 de articole reale).
+    Ele conțin doar Neuroni, nu și apeluri — apelurile erau deja numărate corect.
+    Cifra oficială de facturare o vezi în Cloudflare → AI → Workers AI și în Billing.
   </p>
 
   <style>

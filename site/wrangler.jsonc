@@ -4,6 +4,8 @@
 	"compatibility_flags": ["global_fetch_strictly_public"],
 	"name": "stiri-site",
 	"main": "@astrojs/cloudflare/entrypoints/server",
+	// Adaugarea unei rute dezactiveaza implicit URL-ul workers.dev; il pastram activ.
+	"workers_dev": true,
 	"assets": {
 		"directory": "./dist",
 		"binding": "ASSETS"

@@ -128,9 +128,10 @@ const stepLabel: Record<string, string> = {
     generează cost peste abonament este Workers AI — restul rămân confortabil în alocațiile incluse.
   </p>
   <p class="note">
-    Două precizări: embeddings-urile (<code>bge-m3</code>) nu raportează Neuroni în răspuns, deci
-    apar cu 0 aici — sunt însă foarte ieftine (~1,5% din total). Iar cifra oficială de facturare o
-    vezi în Cloudflare → AI → Workers AI și în Billing.
+    Toți cei trei pași sunt măsurați acum, inclusiv embeddings-urile
+    (<code>bge-m3</code> raportează Neuronii în <code>meta</code>, nu în <code>usage</code> ca
+    modelele de text — până la 7 septembrie 2026 apăreau cu 0 aici). Cifra oficială de
+    facturare o vezi în Cloudflare → AI → Workers AI și în Billing.
   </p>
 
   <style>

@@ -26,7 +26,20 @@ describe("Meter", () => {
     expect(calls).toBe(2);
   });
 
-  it("trateaza lipsa usage.neurons ca 0", async () => {
+  it("citeste neuronii si din meta (forma bge-m3)", async () => {
+    const m = new Meter();
+    // Raspuns real de la @cf/baai/bge-m3: fara `usage`, cu `meta.neurons`.
+    const ai = { run: async () => ({ data: [[0.1]], meta: { neurons: 0.54, cost_metric_value_1: 503 } }) };
+    const w = m.wrap("embed", ai);
+    await w.run("bge", {});
+    await w.run("bge", {});
+    const binds: any[] = [];
+    await m.flush(fakeDb(binds));
+    expect(binds[0][3]).toBeCloseTo(1.08);
+    expect(binds[0][4]).toBe(2);
+  });
+
+  it("trateaza lipsa oricarui camp de neuroni ca 0", async () => {
     const m = new Meter();
     const ai = { run: async () => ({ data: [[0.1]] }) };
     await m.wrap("embed", ai).run("bge", {});

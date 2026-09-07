@@ -2,7 +2,16 @@ import type { AiLike } from "./ai";
 
 interface Row { step: string; model: string; neurons: number; calls: number; }
 
-// Inconjoara binding-ul AI si aduna Neuronii consumati (res.usage.neurons) pe pas+model.
+// Workers AI raporteaza Neuronii in doua locuri diferite, in functie de model:
+//  - modelele de text (llama) => res.usage.neurons (format OpenAI),
+//  - modelele de embeddings (bge-m3) => res.meta.neurons.
+// Citim ambele, altfel embeddings-urile ies contorizate cu 0.
+function neuroni(res: any): number {
+  const n = res?.usage?.neurons ?? res?.meta?.neurons;
+  return typeof n === "number" ? n : 0;
+}
+
+// Inconjoara binding-ul AI si aduna Neuronii consumati pe pas+model.
 // La final de job, flush() scrie agregatul in tabelul `usage` din D1 (upsert pe ziua UTC).
 export class Meter {
   private rows = new Map<string, Row>();
@@ -11,10 +20,9 @@ export class Meter {
     return {
       run: async (model: string, input: unknown) => {
         const res: any = await ai.run(model, input);
-        const n = res?.usage?.neurons;
         const key = `${step}|${model}`;
         const r = this.rows.get(key) ?? { step, model, neurons: 0, calls: 0 };
-        r.neurons += typeof n === "number" ? n : 0;
+        r.neurons += neuroni(res);
         r.calls += 1;
         this.rows.set(key, r);
         return res;

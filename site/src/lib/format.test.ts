@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatSourceCount, rankScore, fmtDataOra, fmtData } from "./format";
+import { formatSourceCount, rankScore, fmtDataOra, fmtData, canonicalUrl, nuIndexa } from "./format";
 
 describe("formatSourceCount", () => {
   it("foloseste regula romaneasca pentru 'de'", () => {
@@ -42,5 +42,36 @@ describe("fus orar Moldova", () => {
   });
   it("intoarce sir gol pentru valoare lipsa", () => {
     expect(fmtDataOra(null)).toBe("");
+  });
+});
+
+describe("canonicalUrl", () => {
+  const SITE = "https://stiri.dumitru.cloud";
+  it("foloseste domeniul oficial, nu cel de pe care vine cererea", () => {
+    expect(canonicalUrl(new URL("https://stiri-site.x.workers.dev/s/42"), SITE))
+      .toBe("https://stiri.dumitru.cloud/s/42");
+  });
+  it("pastreaza categoria", () => {
+    expect(canonicalUrl(new URL("https://stiri.dumitru.cloud/?cat=Sport"), SITE))
+      .toBe("https://stiri.dumitru.cloud/?cat=Sport");
+  });
+  it("arunca restul parametrilor (cautare, token de admin, utm)", () => {
+    expect(canonicalUrl(new URL("https://stiri.dumitru.cloud/?q=test&utm_source=fb"), SITE))
+      .toBe("https://stiri.dumitru.cloud/");
+    expect(canonicalUrl(new URL("https://stiri.dumitru.cloud/admin?k=secret"), SITE))
+      .toBe("https://stiri.dumitru.cloud/admin");
+  });
+});
+
+describe("nuIndexa", () => {
+  it("adminul si cautarea nu se indexeaza", () => {
+    expect(nuIndexa(new URL("https://x.md/admin"))).toBe(true);
+    expect(nuIndexa(new URL("https://x.md/admin?k=secret"))).toBe(true);
+    expect(nuIndexa(new URL("https://x.md/?q=ceva"))).toBe(true);
+  });
+  it("paginile publice se indexeaza", () => {
+    expect(nuIndexa(new URL("https://x.md/"))).toBe(false);
+    expect(nuIndexa(new URL("https://x.md/?cat=Sport"))).toBe(false);
+    expect(nuIndexa(new URL("https://x.md/s/42"))).toBe(false);
   });
 });

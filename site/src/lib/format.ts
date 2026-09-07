@@ -60,3 +60,20 @@ export function relTime(iso: string | null, now: Date = new Date()): string {
   const zile = Math.round(h / 24);
   return zile === 1 ? "acum o zi" : `acum ${zile} zile`;
 }
+
+// Adresa canonică a paginii. Site-ul e servit și pe *.workers.dev, iar fără canonical
+// Google ar indexa același conținut de două ori și ar împărți semnalele SEO între ele.
+// Din query păstrăm doar `cat` (categoriile sunt pagini distincte); căutarea și token-ul
+// de admin nu au ce căuta într-o adresă canonică.
+export function canonicalUrl(url: URL, site: string | URL): string {
+  const c = new URL(url.pathname, site);
+  const cat = url.searchParams.get("cat");
+  if (cat) c.searchParams.set("cat", cat);
+  return c.href;
+}
+
+// Pagini care nu trebuie indexate: adminul (are token în adresă) și rezultatele
+// de căutare (număr nelimitat de adrese cu conținut aproape identic).
+export function nuIndexa(url: URL): boolean {
+  return url.pathname.startsWith("/admin") || url.searchParams.has("q");
+}

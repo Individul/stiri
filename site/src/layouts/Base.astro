@@ -3,6 +3,8 @@ interface Props {
   title: string;
   description?: string;
 }
+import { canonicalUrl, nuIndexa } from "../lib/format";
+
 const { title, description } = Astro.props;
 
 const CATS = ["Politică", "Economie", "Social", "Justiție", "Externe", "Sport", "Cultură"];
@@ -20,6 +22,8 @@ const homeActive = onHome && !curCat && !curQ;
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light" />
     {description && <meta name="description" content={description} />}
+    <link rel="canonical" href={canonicalUrl(url, Astro.site ?? url.origin)} />
+    {nuIndexa(url) && <meta name="robots" content="noindex, follow" />}
     <title>{title}</title>
     <style is:global>
       :root {
